@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
 import Button from '../components/ui/Button';
-import { Clock, Star, Shield, CheckCircle, Calendar } from 'lucide-react';
+import { Clock, Star, Shield, CheckCircle, Calendar, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
+import { getMediaUrl } from '../utils/media';
 
 const ServiceDetailsPage = () => {
     const { id } = useParams();
@@ -56,7 +57,14 @@ const ServiceDetailsPage = () => {
                 const distance = parseFloat((R * c).toFixed(1));
                 const calculatedEta = Math.ceil((distance / 30) * 60 + 10);
                 setEta(`${calculatedEta} mins away`);
+            }, (error) => {
+                console.error('Location error:', error);
+                if (error.code === 1) {
+                    toast.error('Location permission denied. ETA calculation disabled.', { id: 'location-denied' });
+                }
             });
+        } else if (!navigator.geolocation) {
+            toast.error('Geolocation is not supported by your browser.', { id: 'no-geo' });
         }
     }, [service]);
 
@@ -141,9 +149,10 @@ const ServiceDetailsPage = () => {
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
                     <div className="h-64 lg:h-auto relative">
                         <img
-                            src={service.headerImage || 'https://images.unsplash.com/photo-1581578731117-104f2a41272c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80'}
+                            src={getMediaUrl(service.headerImage)}
                             alt={service.title}
                             className="w-full h-full object-cover"
+                            onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1581578731117-104f2a41272c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1567&q=80'; }}
                         />
                     </div>
 
@@ -152,6 +161,12 @@ const ServiceDetailsPage = () => {
                             <span className="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded uppercase tracking-wide">
                                 {service.category || 'Service'}
                             </span>
+                            {service.technician?.technicianProfile?.documents?.verificationStatus === 'VERIFIED' && (
+                                <div className="flex items-center gap-1.5 text-xs font-black text-green-700 bg-green-50 border border-green-100 px-3 py-1 rounded-full uppercase italic tracking-widest shadow-sm">
+                                    <ShieldCheck size={14} />
+                                    Verified Pro
+                                </div>
+                            )}
                             <div className="flex items-center text-yellow-400">
                                 <Star className="fill-current" size={16} />
                                 <span className="text-gray-600 text-sm ml-1 font-medium">{service.rating || '4.8'} (120 reviews)</span>

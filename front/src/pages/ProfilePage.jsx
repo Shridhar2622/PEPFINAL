@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { User, Lock, Camera, Mail, Phone, MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getMediaUrl } from '../utils/media';
 
 const ProfilePage = () => {
     const { user, login } = useAuth(); // login used to update user context
@@ -18,9 +19,7 @@ const ProfilePage = () => {
         address: user?.address || ''
     });
     const [profilePhoto, setProfilePhoto] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(user?.profilePhoto
-        ? `http://localhost:5000/uploads/technicians/${user.profilePhoto}`
-        : null);
+    const [photoPreview, setPhotoPreview] = useState(() => getMediaUrl(user?.profilePhoto, user?.name));
 
     // Security Form State
     const [securityData, setSecurityData] = useState({
@@ -101,7 +100,12 @@ const ProfilePage = () => {
                                 <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                     <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-md bg-gray-200">
                                         {photoPreview ? (
-                                            <img src={photoPreview} alt="Profile" className="w-full h-full object-cover" />
+                                            <img
+                                                src={photoPreview}
+                                                alt="Profile"
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name)}&background=random`; }}
+                                            />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center text-gray-400">
                                                 <User size={40} />

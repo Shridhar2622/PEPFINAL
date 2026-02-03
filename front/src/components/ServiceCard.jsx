@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Clock, Star, Edit2, Trash2 } from 'lucide-react';
+import { Clock, Star, Edit2, Trash2, ShieldCheck } from 'lucide-react';
 import Button from './ui/Button';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { getMediaUrl } from '../utils/media';
 
 const ServiceCard = ({ service, onUpdate, userLocation }) => {
     const { user } = useAuth();
@@ -58,9 +59,10 @@ const ServiceCard = ({ service, onUpdate, userLocation }) => {
         <div className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-full group ${isOffline ? 'opacity-75 grayscale' : ''}`}>
             <div className="relative h-48 overflow-hidden">
                 <img
-                    src={service.headerImage || 'https://images.unsplash.com/photo-1581578731117-104f2a41272c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'}
+                    src={getMediaUrl(service.headerImage)}
                     alt={service.title}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1581578731117-104f2a41272c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'; }}
                 />
                 <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-sm font-semibold text-indigo-600 flex items-center gap-1 shadow-sm">
                     <Star size={14} className="fill-indigo-600" />
@@ -113,6 +115,12 @@ const ServiceCard = ({ service, onUpdate, userLocation }) => {
                     <span className={`text-xs font-semibold tracking-wide uppercase px-2 py-1 rounded-full ${isOffline ? 'bg-gray-100 text-gray-500' : 'text-indigo-500 bg-indigo-50'}`}>
                         {service.category || 'Service'}
                     </span>
+                    {service.technician?.technicianProfile?.documents?.verificationStatus === 'VERIFIED' && (
+                        <div className="flex items-center gap-1 text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-full uppercase tracking-tighter">
+                            <ShieldCheck size={12} />
+                            Verified
+                        </div>
+                    )}
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{service.title}</h3>

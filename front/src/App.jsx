@@ -15,6 +15,7 @@ import TechnicianOnboardingPage from './pages/technician/TechnicianOnboardingPag
 
 import CreateServicePage from './pages/technician/CreateServicePage';
 import EditServicePage from './pages/technician/EditServicePage';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 
 function App() {
   return (
@@ -75,6 +76,16 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['USER', 'TECHNICIAN', 'ADMIN']}>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<LoginPage isAdminLogin={true} />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

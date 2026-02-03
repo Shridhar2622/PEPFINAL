@@ -4,6 +4,7 @@ import ServiceCard from '../components/ServiceCard';
 import api from '../services/api';
 import { Search, Filter } from 'lucide-react';
 import Button from '../components/ui/Button';
+import toast from 'react-hot-toast';
 
 const ServicesPage = () => {
     const [services, setServices] = useState([]);
@@ -42,7 +43,7 @@ const ServicesPage = () => {
                     const coords = [longitude, latitude];
                     setUserLocation(coords);
 
-                    // Persist location to User Profile as requested
+                    // Persist location to User Profile
                     try {
                         const token = localStorage.getItem('token');
                         if (token) {
@@ -59,8 +60,20 @@ const ServicesPage = () => {
                 },
                 (error) => {
                     console.error('Location error:', error);
+                    if (error.code === 1) { // PERMISSION_DENIED
+                        toast.error('Location permission denied. ETAs will not be available.', {
+                            id: 'location-denied',
+                            duration: 4000
+                        });
+                    } else {
+                        toast.error('Unable to retrieve your location.', {
+                            id: 'location-error'
+                        });
+                    }
                 }
             );
+        } else {
+            toast.error('Geolocation is not supported by your browser.');
         }
     };
 
