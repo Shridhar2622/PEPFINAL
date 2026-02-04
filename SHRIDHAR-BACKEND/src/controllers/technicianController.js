@@ -1,0 +1,285 @@
+const TechnicianProfile = require('../models/TechnicianProfile');
+const User = require('../models/User');
+const AppError = require('../utils/AppError');
+
+exports.createProfile = async (req, res, next) => {
+    try {
+        // 1. Allow 'USER' to create profile (they will be upgraded later)
+        if (!['USER', 'TECHNICIAN'].includes(req.user.role)) {
+            return next(new AppError('Invalid role to create technician profile.', 403));
+        }
+
+        // 2. Prepare Profile Data
+        let profileData = {
+            bio: req.body.bio,
+            skills: req.body.skills,
+            location: req.body.location
+        };
+
+        if (req.file) {
+            const cloudinary = require('cloudinary').v2;
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'technicians',
+                use_filename: true
+            });
+
+            profileData.profilePhoto = result.secure_url;
+
+            // Cleanup local file
+            const fs = require('fs');
+            fs.unlinkSync(req.file.path);
+        } else if (req.body.profilePhoto) {
+            profileData.profilePhoto = req.body.profilePhoto;
+        }
+
+        // 3. Upsert Profile
+        const profile = await TechnicianProfile.findOneAndUpdate(
+            { user: req.user.id },
+            {
+                $set: profileData,
+                $setOnInsert: { user: req.user.id, isProfileCompleted: false }
+            },
+            { new: true, upsert: true, runValidators: true }
+        );
+
+        res.status(201).json({
+            status: 'success',
+            data: { profile }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.updateProfile = async (req, res, next) => {
+    try {
+        const currentProfile = await TechnicianProfile.findOne({ user: req.user.id });
+
+        if (req.file) {
+            const cloudinary = require('cloudinary').v2;
+            cloudinary.config({
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+                api_key: process.env.CLOUDINARY_API_KEY,
+                api_secret: process.env.CLOUDINARY_API_SECRET
+            });
+
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'technicians',
+                use_filename: true
+            });
+
+            req.body.profilePhoto = result.secure_url;
+
+            // Cleanup local file
+            const fs = require('fs');
+            fs.unlinkSync(req.file.path);
+
+            // Delete old photo from Cloudinary if applicable
+            const deleteFromCloudinary = require('../utils/cloudinaryDelete');
+            if (currentProfile && currentProfile.profilePhoto) {
+                await deleteFromCloudinary(currentProfile.profilePhoto);
+            }
+        }
+
+        const profile = await TechnicianProfile.findOneAndUpdate(
+            { user: req.user.id },
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (!profile) {
+            return next(new AppError('Technician profile not found. Please create one first.', 404));
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { profile }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.getAllTechnicians = async (req, res, next) => {
+    try {
+        // Build Query
+        const queryObj = { ...req.query };
+        const excludedFields = ['page', 'sort', 'limit', 'fields'];
+        excludedFields.forEach(el => delete queryObj[el]);
+
+        // Filtering by skills (simple regex partial match or exact)
+        if (req.query.skills) {
+            // Assume comma separated 'plumber,electrician'
+            const skills = req.query.skills.split(',');
+            queryObj.skills = { $in: skills };
+        }
+
+        // Filtering by rating
+        if (req.query.rating) {
+            queryObj.avgRating = { $gte: req.query.rating };
+        }
+
+        // Always show online first? Or filter by online?
+        // queryObj.isOnline = true; // Optional: only show online technicians?
+
+        let query = TechnicianProfile.find(queryObj).populate('user', 'name email');
+
+        // Execute
+        const technicians = await query;
+
+        res.status(200).json({
+            status: 'success',
+            results: technicians.length,
+            data: { technicians }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.getTechnician = async (req, res, next) => {
+    try {
+        const technician = await TechnicianProfile.findById(req.params.id).populate('user', 'name email');
+
+        if (!technician) {
+            return next(new AppError('No technician found with that ID', 404));
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { technician }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+exports.uploadDocuments = async (req, res, next) => {
+    try {
+
+
+        if (!req.files || Object.keys(req.files).length === 0) {
+            return next(new AppError('Please upload at least one document', 400));
+        }
+
+        const updateData = {
+            'documents.verificationStatus': 'PENDING'
+        };
+
+        const cloudinary = require('cloudinary').v2;
+        cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET
+        });
+
+        const fs = require('fs');
+
+        if (req.files.aadharCard) {
+            const res = await cloudinary.uploader.upload(req.files.aadharCard[0].path, { folder: 'verification' });
+            updateData['documents.aadharCard'] = res.secure_url;
+            fs.unlinkSync(req.files.aadharCard[0].path);
+        }
+        if (req.files.panCard) {
+            const res = await cloudinary.uploader.upload(req.files.panCard[0].path, { folder: 'verification' });
+            updateData['documents.panCard'] = res.secure_url;
+            fs.unlinkSync(req.files.panCard[0].path);
+        }
+        if (req.files.resume) {
+            const res = await cloudinary.uploader.upload(req.files.resume[0].path, { folder: 'verification' });
+            updateData['documents.resume'] = res.secure_url;
+            fs.unlinkSync(req.files.resume[0].path);
+        }
+
+        // 3. Update Profile
+        const profile = await TechnicianProfile.findOneAndUpdate(
+            { user: req.user.id },
+            {
+                $set: {
+                    ...updateData,
+                    isProfileCompleted: true
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!profile) {
+            return next(new AppError('Technician profile not found', 404));
+        }
+
+        // 4. Update User onboarding status and ROLE
+        await User.findByIdAndUpdate(req.user.id, {
+            isTechnicianOnboarded: true,
+            role: 'TECHNICIAN'
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: { profile }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+exports.getMyProfile = async (req, res, next) => {
+    try {
+        // 1. AUTO-SYNC: Ensure the services array matches actual Service documents
+        // Use atomic update to avoid race conditions with isOnline status
+        const Service = require('../models/Service');
+        const realServices = await Service.find({ technician: req.user.id }).select('_id');
+        const realServiceIds = realServices.map(s => s._id);
+
+        // 2. Find and Update atomically, then populate
+        const profile = await TechnicianProfile.findOneAndUpdate(
+            { user: req.user.id },
+            { services: realServiceIds },
+            { new: true }
+        )
+            .populate('user', 'name email phone profilePhoto')
+            .populate('services');
+
+        if (!profile) {
+            return res.status(200).json({
+                status: 'success',
+                data: { profile: null }
+            });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { profile }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.updateStatus = async (req, res, next) => {
+    try {
+        const { isOnline } = req.body;
+        if (typeof isOnline !== 'boolean') {
+            return next(new AppError('isOnline must be a boolean', 400));
+        }
+
+        const profile = await TechnicianProfile.findOneAndUpdate(
+            { user: req.user.id },
+            { isOnline },
+            { new: true }
+        );
+
+        if (!profile) return next(new AppError('Profile not found', 404));
+
+        res.status(200).json({
+            status: 'success',
+            data: { isOnline: profile.isOnline }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
