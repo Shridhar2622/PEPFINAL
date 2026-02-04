@@ -13,6 +13,9 @@ require('./config/passport'); // Passport Config
 
 const app = express();
 
+// Trust Proxy for Render/Heroku (Required for Secure Cookies)
+app.enable('trust proxy');
+
 // CORS - Must be first
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
