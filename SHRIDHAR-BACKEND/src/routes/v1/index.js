@@ -24,6 +24,7 @@ router.use('/categories', categoryRoutes);
 // --- ENABLED ENDPOINTS ---
 router.use('/notifications', notificationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/feedbacks', require('./feedbackRoutes'));
 router.use('/payments', require('./paymentRoutes'));
 
 module.exports = router;

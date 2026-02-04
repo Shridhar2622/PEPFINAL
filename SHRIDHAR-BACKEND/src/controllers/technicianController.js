@@ -161,10 +161,8 @@ exports.getTechnician = async (req, res, next) => {
 };
 exports.uploadDocuments = async (req, res, next) => {
     try {
-
-
-        if (!req.files || Object.keys(req.files).length === 0) {
-            return next(new AppError('Please upload at least one document', 400));
+        if (!req.files || !req.files.aadharCard || !req.files.panCard) {
+            return next(new AppError('Aadhaar Card and PAN Card are mandatory for verification.', 400));
         }
 
         const updateData = {

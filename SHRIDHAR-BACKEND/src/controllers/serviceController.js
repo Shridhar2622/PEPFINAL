@@ -63,6 +63,13 @@ exports.getAllServices = async (req, res, next) => {
             queryObj.title = { $regex: req.query.search, $options: 'i' };
         }
 
+        // Category feature (Case Insensitive)
+        if (req.query.category && req.query.category !== 'All') {
+            queryObj.category = { $regex: `^${req.query.category}$`, $options: 'i' };
+        } else if (req.query.category === 'All') {
+            delete queryObj.category;
+        }
+
         // Visibility Guard: ONLY show services from ACTIVE technicians who are NOT REJECTED
         const User = require('../models/User');
         const TechnicianProfile = require('../models/TechnicianProfile');
@@ -95,11 +102,16 @@ exports.getAllServices = async (req, res, next) => {
             queryObj.technician = { $in: allowedTechIds };
         }
 
-        let query = Service.find(queryObj).populate({
-            path: 'technician',
-            select: 'name email profilePhoto isActive',
-            populate: { path: 'technicianProfile', select: 'isOnline avgRating totalJobs location documents' }
-        });
+        let query = Service.find(queryObj)
+            .select('title category price image headerImage rating reviewCount isActive createdAt') // Select only needed service fields
+            .populate({
+                path: 'technician',
+                select: 'name email profilePhoto isActive location', // Select only needed technician fields
+                populate: {
+                    path: 'technicianProfile',
+                    select: 'isOnline avgRating totalJobs location categoryRatings' // Select only needed profile fields
+                }
+            });
 
         // Sorting
         if (req.query.sort) {
@@ -108,7 +120,28 @@ exports.getAllServices = async (req, res, next) => {
             query = query.sort('-createdAt');
         }
 
-        const services = await query;
+        let services = await query;
+
+        // Inject Category-Specific Rating into the Service Object
+        services = services.map(doc => {
+            const service = doc.toObject();
+            if (service.technician && service.technician.technicianProfile) {
+                const profile = service.technician.technicianProfile;
+                // Find rating for this service's category
+                const categoryStats = profile.categoryRatings?.find(
+                    r => r.category && r.category.toLowerCase() === service.category.toLowerCase()
+                );
+
+                if (categoryStats) {
+                    service.rating = categoryStats.avgRating;
+                    service.reviewCount = categoryStats.count;
+                } else {
+                    service.rating = 0; // Default to 0 ("New") if no specific reviews
+                    service.reviewCount = 0;
+                }
+            }
+            return service;
+        });
 
         res.status(200).json({
             status: 'success',
@@ -122,10 +155,10 @@ exports.getAllServices = async (req, res, next) => {
 
 exports.getService = async (req, res, next) => {
     try {
-        const service = await Service.findById(req.params.id).populate({
+        let service = await Service.findById(req.params.id).populate({
             path: 'technician',
-            select: 'name email profilePhoto isActive',
-            populate: { path: 'technicianProfile', select: 'isOnline avgRating totalJobs location documents' }
+            select: 'name email profilePhoto isActive phone',
+            populate: { path: 'technicianProfile', select: 'isOnline avgRating totalJobs location documents categoryRatings' }
         });
 
         if (!service) {
@@ -140,6 +173,24 @@ exports.getService = async (req, res, next) => {
         // Hide service if technician is REJECTED
         if (service.technician?.technicianProfile?.documents?.verificationStatus === 'REJECTED') {
             return next(new AppError('This service is unavailable as the provider is under review or rejected.', 403));
+        }
+
+        // Inject Category Rating
+        const serviceObj = service.toObject();
+        if (serviceObj.technician && serviceObj.technician.technicianProfile) {
+            const profile = serviceObj.technician.technicianProfile;
+            const categoryStats = profile.categoryRatings?.find(
+                r => r.category && r.category.toLowerCase() === serviceObj.category.toLowerCase()
+            );
+
+            if (categoryStats) {
+                serviceObj.rating = categoryStats.avgRating;
+                serviceObj.reviewCount = categoryStats.count;
+            } else {
+                serviceObj.rating = 0;
+                serviceObj.reviewCount = 0;
+            }
+            service = serviceObj;
         }
 
         res.status(200).json({

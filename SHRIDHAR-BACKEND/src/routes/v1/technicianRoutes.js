@@ -22,7 +22,7 @@ router.get('/:id', technicianController.getTechnician);
 router.use(authMiddleware.protect);
 
 router.post('/documents',
-    authMiddleware.restrictTo('TECHNICIAN'),
+    authMiddleware.restrictTo('USER', 'TECHNICIAN'),
     upload.fields([
         { name: 'aadharCard', maxCount: 1 },
         { name: 'panCard', maxCount: 1 },
@@ -33,7 +33,7 @@ router.post('/documents',
 
 router.post(
     '/profile',
-    authMiddleware.restrictTo('TECHNICIAN'),
+    authMiddleware.restrictTo('USER', 'TECHNICIAN'),
     upload.single('profilePhoto'),
     validate(technicianValidation.createProfile),
     technicianController.createProfile

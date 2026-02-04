@@ -14,6 +14,14 @@ const categorySchema = new mongoose.Schema({
         type: String,
         default: 'default-category.jpg'
     },
+    icon: {
+        type: String,
+        default: 'Hammer'
+    },
+    color: {
+        type: String,
+        default: 'bg-indigo-100 text-indigo-600'
+    },
     description: {
         type: String,
         trim: true
