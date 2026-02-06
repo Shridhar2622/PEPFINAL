@@ -4,6 +4,7 @@ const Service = require('../models/Service');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 const Settings = require('../models/Settings');
+const Dealer = require('../models/Dealer');
 const AppError = require('../utils/AppError');
 const adminService = require('../services/adminService');
 
@@ -79,7 +80,7 @@ exports.getDashboardStats = async (req, res, next) => {
             }),
             Booking.aggregate([
                 { $match: { status: 'COMPLETED' } },
-                { $group: { _id: null, total: { $sum: '$price' } } }
+                { $group: { _id: null, total: { $sum: { $ifNull: ['$finalAmount', '$price'] } } } }
             ])
         ]);
 
@@ -289,6 +290,7 @@ exports.getAllBookings = async (req, res, next) => {
             .populate('customer', 'name email')
             .populate('technician', 'name email phone')
             .populate('service', 'title price')
+            .populate('extraReason', 'reason')
             .sort('-createdAt');
 
         res.status(200).json({
@@ -402,4 +404,113 @@ exports.deleteReview = async (req, res, next) => {
         next(error);
     }
 };
+// --- DEALER CONTROLLERS ---
 
+exports.getAllDealers = async (req, res, next) => {
+    try {
+        const dealers = await Dealer.find().sort('-createdAt');
+        res.status(200).json({
+            status: 'success',
+            data: { dealers }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.createDealer = async (req, res, next) => {
+    try {
+        const dealer = await Dealer.create(req.body);
+        res.status(201).json({
+            status: 'success',
+            data: { dealer }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.updateDealer = async (req, res, next) => {
+    try {
+        const dealer = await Dealer.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
+        if (!dealer) return next(new AppError('No dealer found with that ID', 404));
+
+        res.status(200).json({
+            status: 'success',
+            data: { dealer }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.deleteDealer = async (req, res, next) => {
+    try {
+        const dealer = await Dealer.findByIdAndDelete(req.params.id);
+        if (!dealer) return next(new AppError('No dealer found with that ID', 404));
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Dealer deleted successfully'
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.toggleDealerStatus = async (req, res, next) => {
+    try {
+        const dealer = await Dealer.findById(req.params.id);
+        if (!dealer) return next(new AppError('No dealer found with that ID', 404));
+
+        dealer.isActive = !dealer.isActive;
+        await dealer.save();
+
+        res.status(200).json({
+            status: 'success',
+            data: { dealer }
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// --- WORK ASSIGNMENT ---
+
+exports.assignTechnician = async (req, res, next) => {
+    try {
+        const { technicianId } = req.body;
+        const booking = await Booking.findById(req.params.id);
+
+        if (!booking) return next(new AppError('No booking found with that ID', 404));
+
+        // Update technician
+        booking.technician = technicianId;
+
+        // If booking was 'PENDING', move to 'ASSIGNED'
+        if (booking.status === 'PENDING') {
+            booking.status = 'ASSIGNED';
+        }
+
+        // Generate a fresh Happy PIN if not present (or regenerate for security)
+        const securityPin = Math.floor(100000 + Math.random() * 900000).toString();
+        booking.securityPin = securityPin;
+
+        await booking.save();
+
+        const updatedBooking = await Booking.findById(booking._id)
+            .populate('customer', 'name email phone')
+            .populate('technician', 'name email phone')
+            .populate('service', 'title price');
+
+        res.status(200).json({
+            status: 'success',
+            data: { booking: updatedBooking }
+        });
+    } catch (err) {
+        next(err);
+    }
+};

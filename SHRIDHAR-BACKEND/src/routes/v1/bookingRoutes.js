@@ -5,6 +5,8 @@ const validate = require('../../utils/validate');
 const { createBooking, updateBookingStatus, getBooking } = require('../../validations/booking.validation');
 const reviewRouter = require('./reviewRoutes');
 
+const upload = require('../../middlewares/upload');
+
 const router = express.Router();
 
 // Mount review router
@@ -27,6 +29,6 @@ router
 
 router
     .route('/:bookingId/status')
-    .patch(validate(updateBookingStatus), bookingController.updateBookingStatus);
+    .patch(upload.array('partImages', 5), validate(updateBookingStatus), bookingController.updateBookingStatus);
 
 module.exports = router;

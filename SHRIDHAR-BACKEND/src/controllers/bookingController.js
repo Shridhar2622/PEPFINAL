@@ -1,9 +1,15 @@
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const Review = require('../models/Review');
+const Reason = require('../models/Reason');
 const TechnicianProfile = require('../models/TechnicianProfile');
 const AppError = require('../utils/AppError');
 const notificationService = require('../services/notificationService');
+
+// Helper to generate 6-digit Happy Pin
+const generateHappyPin = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 exports.createBooking = async (req, res, next) => {
     try {
@@ -66,7 +72,7 @@ exports.createBooking = async (req, res, next) => {
             return undefined;
         };
 
-        const booking = await Booking.create({
+        let booking = await Booking.create({
             customer: req.user.id,
             technician: service.technician._id,
             service: serviceId,
@@ -81,7 +87,8 @@ exports.createBooking = async (req, res, next) => {
             pickupLocation: formatLocation(req.body.pickupLocation),
             dropLocation: formatLocation(req.body.dropLocation),
             distance,
-            estimatedDuration
+            estimatedDuration,
+            securityPin: generateHappyPin()
         });
 
         // Populate for immediate frontend use
@@ -213,7 +220,7 @@ exports.updateBookingStatus = async (req, res, next) => {
         else if (['ACCEPTED', 'REJECTED'].includes(status)) {
             // Only Technician can accept/reject
             if (!isTechnician) return next(new AppError('Only technician can accept/reject', 403));
-            if (booking.status !== 'PENDING') return next(new AppError('Can only update pending bookings', 400));
+            if (!['PENDING', 'ASSIGNED'].includes(booking.status)) return next(new AppError('Can only update pending or assigned bookings', 400));
 
             await notificationService.send({
                 recipient: booking.customer,
@@ -233,6 +240,36 @@ exports.updateBookingStatus = async (req, res, next) => {
                 (booking.status === 'IN_PROGRESS' && status === 'COMPLETED');
 
             if (!isValidFlow) return next(new AppError(`Invalid status transition from ${booking.status} to ${status}`, 400));
+
+            // Logic for COMPLETED status
+            if (status === 'COMPLETED') {
+                const { securityPin, finalAmount, extraReason, technicianNote } = req.body;
+
+                // 1. Verify Happy Pin
+                if (!securityPin || securityPin !== booking.securityPin) {
+                    return next(new AppError('Invalid Happy Pin provided', 400));
+                }
+
+                // 2. Set Completion Fields
+                booking.finalAmount = finalAmount || booking.price;
+                booking.technicianNote = technicianNote;
+                booking.completedAt = Date.now();
+
+                // 3. Handle extra reason if finalAmount > price
+                if (booking.finalAmount > booking.price) {
+                    if (!extraReason) {
+                        return next(new AppError('Reason for extra charges is required', 400));
+                    }
+                    booking.extraReason = extraReason;
+                }
+
+                // 4. Handle Part Images if uploaded
+                if (req.files && req.files.length > 0) {
+                    booking.partImages = req.files.map(file =>
+                        file.path.replace(/\\/g, '/').replace('public/', '')
+                    );
+                }
+            }
 
             await notificationService.send({
                 recipient: booking.customer,
@@ -274,7 +311,7 @@ exports.getTechnicianStats = async (req, res, next) => {
             {
                 $group: {
                     _id: null,
-                    totalEarnings: { $sum: '$price' },
+                    totalEarnings: { $sum: { $ifNull: ['$finalAmount', '$price'] } },
                     completedJobs: { $sum: 1 }
                 }
             }

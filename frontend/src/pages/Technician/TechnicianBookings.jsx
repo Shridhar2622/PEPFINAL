@@ -1,17 +1,56 @@
 import React, { useState } from 'react';
 import { useTechnician } from '../../context/TechnicianContext';
-import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, Play, CheckSquare, Loader, Star, Bell } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, Play, CheckSquare, Loader, Star, Bell, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import Button from '../../components/common/Button';
 
 const TechnicianBookings = () => {
-    const { jobs, loading, updateBookingStatus } = useTechnician();
+    const { jobs, loading, updateBookingStatus, reasons, fetchReasons } = useTechnician();
     const [actionLoading, setActionLoading] = useState(null);
     const [activeTab, setActiveTab] = useState('requests');
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [currentBooking, setCurrentBooking] = useState(null);
+    const [completionForm, setCompletionForm] = useState({
+        securityPin: '',
+        finalAmount: '',
+        extraReason: '',
+        technicianNote: '',
+        partImages: [],
+        previews: []
+    });
 
     const handleAction = async (bookingId, status) => {
+        if (status === 'COMPLETED') {
+            const booking = jobs.find(j => j._id === bookingId);
+            setCurrentBooking(booking);
+            setCompletionForm(prev => ({ ...prev, finalAmount: booking.price }));
+            setShowCompletionModal(true);
+            return;
+        }
+
         setActionLoading(bookingId);
         await updateBookingStatus(bookingId, status);
+        setActionLoading(null);
+    };
+
+    const handleCompleteSubmit = async (e) => {
+        e.preventDefault();
+        if (!completionForm.securityPin) return toast.error("Happy Pin is required");
+
+        setActionLoading(currentBooking._id);
+        const success = await updateBookingStatus(currentBooking._id, 'COMPLETED', completionForm);
+
+        if (success) {
+            setShowCompletionModal(false);
+            setCompletionForm({
+                securityPin: '',
+                finalAmount: '',
+                extraReason: '',
+                technicianNote: '',
+                billImage: null,
+                preview: null
+            });
+        }
         setActionLoading(null);
     };
 
@@ -19,14 +58,14 @@ const TechnicianBookings = () => {
 
     // Filter jobs based on active tab
     const filteredJobs = jobs.filter(booking => {
-        if (activeTab === 'requests') return booking.status === 'PENDING';
+        if (activeTab === 'requests') return ['PENDING', 'ASSIGNED'].includes(booking.status);
         if (activeTab === 'active') return ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status);
         if (activeTab === 'history') return ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(booking.status);
         return false;
     });
 
     const counts = {
-        requests: jobs.filter(j => j.status === 'PENDING').length,
+        requests: jobs.filter(j => ['PENDING', 'ASSIGNED'].includes(j.status)).length,
         active: jobs.filter(j => ['ACCEPTED', 'IN_PROGRESS'].includes(j.status)).length,
         history: jobs.filter(j => ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(j.status)).length
     };
@@ -34,6 +73,7 @@ const TechnicianBookings = () => {
     const getStatusBadge = (status) => {
         const styles = {
             PENDING: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+            ASSIGNED: 'bg-purple-100 text-purple-700 border-purple-200',
             ACCEPTED: 'bg-blue-100 text-blue-700 border-blue-200',
             IN_PROGRESS: 'bg-indigo-100 text-indigo-700 border-indigo-200',
             COMPLETED: 'bg-green-100 text-green-700 border-green-200',
@@ -186,7 +226,7 @@ const TechnicianBookings = () => {
 
                                     {/* Action Buttons */}
                                     <div className="w-full space-y-3">
-                                        {booking.status === 'PENDING' && (
+                                        {['PENDING', 'ASSIGNED'].includes(booking.status) && (
                                             <div className="flex gap-3">
                                                 <Button
                                                     className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 border-0 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
@@ -250,6 +290,155 @@ const TechnicianBookings = () => {
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Completion Modal */}
+            {showCompletionModal && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
+                    <div className="flex min-h-full items-center justify-center">
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in duration-300 my-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Complete Service</h3>
+                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Order #{currentBooking?._id?.slice(-6)}</p>
+                                </div>
+                                <button onClick={() => setShowCompletionModal(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
+                                    <XCircle className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleCompleteSubmit} className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Initial Amount</label>
+                                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-black">
+                                            ₹{currentBooking?.price}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Final Amount</label>
+                                        <input
+                                            type="number"
+                                            required
+                                            value={completionForm.finalAmount}
+                                            onChange={(e) => setCompletionForm(prev => ({ ...prev, finalAmount: e.target.value }))}
+                                            className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                                            placeholder="Enter amount"
+                                        />
+                                    </div>
+                                </div>
+
+                                {Number(completionForm.finalAmount) > Number(currentBooking?.price) && (
+                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Reason for Extra Charges</label>
+                                        <select
+                                            required
+                                            value={completionForm.extraReason}
+                                            onChange={(e) => setCompletionForm(prev => ({ ...prev, extraReason: e.target.value }))}
+                                            className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-bold focus:border-blue-500 outline-none transition-all appearance-none"
+                                        >
+                                            <option value="">Select Reason</option>
+                                            {reasons.map(r => (
+                                                <option key={r._id} value={r._id}>{r.reason}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Happy Pin (From Customer)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={completionForm.securityPin}
+                                        onChange={(e) => setCompletionForm(prev => ({ ...prev, securityPin: e.target.value }))}
+                                        className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-blue-100 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-center text-2xl tracking-[0.5em] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
+                                        placeholder="000000"
+                                        maxLength={6}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Technician Note</label>
+                                    <textarea
+                                        value={completionForm.technicianNote}
+                                        onChange={(e) => setCompletionForm(prev => ({ ...prev, technicianNote: e.target.value }))}
+                                        className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-medium focus:border-blue-500 outline-none transition-all"
+                                        placeholder="Any notes about the service..."
+                                        rows={2}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Installation / Part Images (Required for extra charges)</label>
+                                    <div className="space-y-4">
+                                        <div className="relative group">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files);
+                                                    if (files.length > 0) {
+                                                        const newPreviews = files.map(f => URL.createObjectURL(f));
+                                                        setCompletionForm(prev => ({
+                                                            ...prev,
+                                                            partImages: [...prev.partImages, ...files],
+                                                            previews: [...prev.previews, ...newPreviews]
+                                                        }));
+                                                    }
+                                                }}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            />
+                                            <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-3 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 transition-all">
+                                                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                                    <ImageIcon className="w-6 h-6" />
+                                                </div>
+                                                <div className="text-center">
+                                                    <span className="text-xs font-black text-slate-600 dark:text-slate-300 block">Upload Job Photos</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase mt-1 block tracking-wider">Spare parts or new installation proof</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {completionForm.previews.length > 0 && (
+                                            <div className="grid grid-cols-4 gap-3">
+                                                {completionForm.previews.map((preview, idx) => (
+                                                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800">
+                                                        <img src={preview} className="w-full h-full object-cover" alt={`Preview ${idx + 1}`} />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setCompletionForm(prev => {
+                                                                    const newImages = [...prev.partImages];
+                                                                    const newPreviews = [...prev.previews];
+                                                                    newImages.splice(idx, 1);
+                                                                    newPreviews.splice(idx, 1);
+                                                                    return { ...prev, partImages: newImages, previews: newPreviews };
+                                                                });
+                                                            }}
+                                                            className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-red-500 shadow-sm"
+                                                        >
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    className="w-full py-5 bg-green-600 hover:bg-green-700 text-white shadow-xl shadow-green-500/20 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all min-h-[64px]"
+                                    disabled={actionLoading === currentBooking?._id}
+                                >
+                                    {actionLoading === currentBooking?._id ? <Loader className="animate-spin w-5 h-5" /> : 'Confirm Completion'}
+                                </Button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -31,6 +31,8 @@ export const AdminProvider = ({ children }) => {
     const [reviews, setReviews] = useState([]);
     const [allBookings, setAllBookings] = useState([]);
     const [dashboardStats, setDashboardStats] = useState(null);
+    const [reasons, setReasons] = useState([]);
+    const [dealers, setDealers] = useState([]);
 
     // Helper to transform backend service to frontend shape
     const transformService = (service) => {
@@ -185,6 +187,18 @@ export const AdminProvider = ({ children }) => {
                 const bookingsRes = await client.get('/admin/bookings');
                 if (bookingsRes.data.data) {
                     setAllBookings(bookingsRes.data.data.bookings || []);
+                }
+
+                // Fetch Reasons
+                const reasonsRes = await client.get('/reasons');
+                if (reasonsRes.data.data) {
+                    setReasons(reasonsRes.data.data.reasons || []);
+                }
+
+                // Fetch Dealers
+                const dealersRes = await client.get('/admin/dealers');
+                if (dealersRes.data.data) {
+                    setDealers(dealersRes.data.data.dealers || []);
                 }
             } catch (err) {
                 console.error("Failed to fetch admin data", err);
@@ -471,6 +485,77 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
+    const addReason = async (reasonData) => {
+        try {
+            const res = await client.post('/reasons', reasonData);
+            if (res.data.status === 'success') {
+                setReasons(prev => [...prev, res.data.data.reason]);
+                toast.success("Reason added successfully");
+            }
+        } catch (err) {
+            console.error("Failed to add reason", err);
+            toast.error("Failed to add reason");
+        }
+    };
+
+    const deleteReason = async (id) => {
+        try {
+            await client.delete(`/reasons/${id}`);
+            setReasons(prev => prev.filter(r => r._id !== id));
+            toast.success("Reason deleted successfully");
+        } catch (err) {
+            console.error("Failed to delete reason", err);
+            toast.error("Failed to delete reason");
+        }
+    };
+
+    const addDealer = async (dealerData) => {
+        try {
+            const res = await client.post('/admin/dealers', dealerData);
+            if (res.data.status === 'success') {
+                setDealers(prev => [res.data.data.dealer, ...prev]);
+                toast.success("Dealer added successfully");
+            }
+        } catch (err) {
+            console.error("Failed to add dealer", err);
+            toast.error("Failed to add dealer");
+        }
+    };
+
+    const deleteDealer = async (id) => {
+        try {
+            await client.delete(`/admin/dealers/${id}`);
+            setDealers(prev => prev.filter(d => d._id !== id));
+            toast.success("Dealer deleted");
+        } catch (err) {
+            console.error("Failed to delete dealer", err);
+            toast.error("Failed to delete dealer");
+        }
+    };
+
+    const toggleDealerStatus = async (id) => {
+        try {
+            const res = await client.patch(`/admin/dealers/${id}/status`);
+            setDealers(prev => prev.map(d => d._id === id ? res.data.data.dealer : d));
+            toast.success("Status updated");
+        } catch (err) {
+            console.error("Failed to toggle status", err);
+            toast.error("Failed to toggle status");
+        }
+    };
+
+    const assignTechnician = async (bookingId, technicianId) => {
+        try {
+            const res = await client.patch(`/admin/bookings/${bookingId}/assign`, { technicianId });
+            const updatedBooking = res.data.data.booking;
+            setAllBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
+            toast.success("Technician assigned successfully");
+        } catch (err) {
+            console.error("Failed to assign technician", err);
+            toast.error("Assignment failed");
+        }
+    };
+
     return (
         <AdminContext.Provider value={{
             isAdminAuthenticated,
@@ -499,6 +584,14 @@ export const AdminProvider = ({ children }) => {
             toggleUserStatus,
             allBookings,
             dashboardStats,
+            reasons,
+            addReason,
+            deleteReason,
+            dealers,
+            addDealer,
+            deleteDealer,
+            toggleDealerStatus,
+            assignTechnician,
             deleteReview,
             cancelBooking
         }}>

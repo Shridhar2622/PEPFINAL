@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, MapPin, ShieldCheck, Clock, User, Phone } from 'lucide-react';
+import client from '../../api/client';
 import Button from '../../components/common/Button';
 import { useBookings } from '../../context/BookingContext';
 import { useUser } from '../../context/UserContext';
 import BookingModal from '../../components/bookings/BookingModal';
-import { useService } from '../../hooks/useServices';
 
 const ServiceDetailsPage = () => {
     const { id } = useParams();
@@ -13,8 +13,8 @@ const ServiceDetailsPage = () => {
     const { addBooking } = useBookings();
     const { isAuthenticated } = useUser();
 
-// Use React Query for service data with caching
-    const { data: service, isLoading: loading, error } = useService(id);
+    const [service, setService] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [reviews, setReviews] = useState([]);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [loadingReviews, setLoadingReviews] = useState(false);
@@ -32,25 +32,32 @@ const ServiceDetailsPage = () => {
         }
     }, []);
 
-    // Fetch reviews when service data is available
     useEffect(() => {
-        if (service?.technician?._id) {
-            fetchReviews(service.technician._id);
-        }
-    }, [service?.technician?._id]);
+        const fetchServiceDetails = async () => {
+            try {
+                // Fetch service details
+                const res = await client.get(`/services/${id}`);
+                setService(res.data.data.service);
 
-const fetchReviews = async (technicianId) => {
+                // Fetch real reviews
+                if (res.data.data.service?.technician?._id) {
+                    fetchReviews(res.data.data.service.technician._id);
+                }
+            } catch (err) {
+                console.error("Failed to fetch service details", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchServiceDetails();
+    }, [id]);
+
+    const fetchReviews = async (technicianId) => {
         try {
             setLoadingReviews(true);
-            // Note: This could also be moved to a React Query hook for better caching
-            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/technicians/${technicianId}/reviews`, {
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            const data = await res.json();
-            setReviews(data.data?.reviews || []);
+            const res = await client.get(`/technicians/${technicianId}/reviews`);
+            setReviews(res.data.data.reviews);
         } catch (err) {
             console.error('Error fetching reviews:', err);
         } finally {
@@ -76,8 +83,8 @@ const fetchReviews = async (technicianId) => {
         }
     };
 
-if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    if (error || !service) return <div className="min-h-screen flex items-center justify-center">Service not found</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    if (!service) return <div className="min-h-screen flex items-center justify-center">Service not found</div>;
 
     const techProfile = service.technician?.technicianProfile || {};
     const techName = service.technician?.name || 'Technician';

@@ -175,7 +175,7 @@ const TechnicianRegisterPage = () => {
 
                         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
                             Already registered?{' '}
-                            <Link to="/login" className="font-bold text-blue-600 hover:text-blue-700">
+                            <Link to="/technician/login" className="font-bold text-blue-600 hover:text-blue-700">
                                 Log in
                             </Link>
                         </p>

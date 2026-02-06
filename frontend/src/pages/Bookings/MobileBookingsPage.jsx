@@ -85,7 +85,7 @@ const MobileBookingsPage = () => {
         <div className="min-h-screen bg-white dark:bg-slate-950 pb-24 font-sans transition-colors duration-300 relative overflow-hidden">
             {/* ... (Header and decorations - unchanged) ... */}
             <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1.5px,transparent_1.5px)] dark:bg-[radial-gradient(#1e293b_1.5px,transparent_1.5px)] [background-size:24px_24px] opacity-40" />
+                <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px] opacity-20 dark:opacity-10" />
             </div>
 
             {/* Header */}
@@ -230,8 +230,16 @@ const MobileBookingsPage = () => {
                                                     <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
                                                     <span>{booking.date} at {booking.time}</span>
                                                 </div>
-                                                <div className="font-black text-rose-600 dark:text-rose-400">
-                                                    ₹{booking.price}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="font-black text-rose-600 dark:text-rose-400">
+                                                        ₹{booking.price}
+                                                    </div>
+                                                    {booking.status === 'Assigned' && booking.securityPin && (
+                                                        <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/40 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-900/30">
+                                                            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                                            <span className="text-[10px] font-black text-blue-700 dark:text-blue-300">PIN: {booking.securityPin}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

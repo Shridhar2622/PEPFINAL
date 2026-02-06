@@ -18,7 +18,7 @@ const bookingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['PENDING', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REJECTED'],
+        enum: ['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REJECTED'],
         default: 'PENDING'
     },
     paymentStatus: {
@@ -65,7 +65,29 @@ const bookingSchema = new mongoose.Schema({
         address: String
     },
     distance: Number, // in kilometers
-    estimatedDuration: Number // in minutes
+    estimatedDuration: Number, // in minutes
+    // --- Completion Fields (from PHP logic) ---
+    finalAmount: {
+        type: Number
+    },
+    extraReason: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Reason'
+    },
+    technicianNote: {
+        type: String,
+        trim: true
+    },
+    partImages: [{
+        type: String
+    }],
+    securityPin: {
+        type: String,
+        required: [true, 'Happy Pin is required for completion verification']
+    },
+    completedAt: {
+        type: Date
+    }
 }, {
     timestamps: true,
     toJSON: { virtuals: true },

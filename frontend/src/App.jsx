@@ -23,14 +23,24 @@ import HouseShiftingPage from './pages/Services/HouseShiftingPage';
 import SavedServicesPage from './pages/Saved/SavedServicesPage';
 import AddressesPage from './pages/Profile/AddressesPage';
 import AIChatBot from './components/mobile/AIChatBot';
+import AdminLayout from './layouts/AdminLayout';
+import AdminOverview from './pages/Admin/AdminOverview';
+import AdminToggles from './pages/Admin/AdminToggles';
+import AdminServices from './pages/Admin/AdminServices';
+import AdminTechnicians from './pages/Admin/AdminTechnicians';
+import AdminBookings from './pages/Admin/AdminBookings';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminReasons from './pages/Admin/AdminReasons';
+import AdminDealers from './pages/Admin/AdminDealers';
+import AdminFeedback from './pages/Admin/AdminFeedback';
 import AdminLoginPage from './pages/Admin/AdminLoginPage';
-import AdminDashboard from './pages/Admin/AdminDashboard';
 import CareersPage from './pages/Static/CareersPage';
 import ContactPage from './pages/Static/ContactPage';
 import PartnerLandingPage from './pages/BeAPartner/PartnerLandingPage';
 import TechnicianRegisterPage from './pages/BeAPartner/TechnicianRegisterPage';
 import TechnicianOnboardingPage from './pages/BeAPartner/TechnicianOnboardingPage';
 import TechnicianDashboard from './pages/Technician/TechnicianDashboard';
+import TechnicianLoginPage from './pages/Technician/TechnicianLoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -104,6 +114,7 @@ function AnimatedRoutes() {
             {/* Technician Routes */}
             <Route path="/partner" element={<PartnerLandingPage />} />
             <Route path="/partner/register" element={<TechnicianRegisterPage />} />
+            <Route path="/technician/login" element={<TechnicianLoginPage />} />
             <Route path="/technician/onboarding" element={
               <ProtectedRoute allowedRoles={['TECHNICIAN']}>
                 <TechnicianOnboardingPage />
@@ -115,14 +126,24 @@ function AnimatedRoutes() {
               </ProtectedRoute>
             } />
 
-            {/* Isolated Admin Routes */}
+            {/* Modular Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/admin/dashboard" element={
+            <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['ADMIN']}>
-                <AdminDashboard />
+                <AdminLayout />
               </ProtectedRoute>
-            } />
-            <Route path="/admin" element={<AdminLoginPage />} />
+            }>
+              <Route index element={<AdminOverview />} />
+              <Route path="dashboard" element={<AdminOverview />} />
+              <Route path="toggles" element={<AdminToggles />} />
+              <Route path="services" element={<AdminServices />} />
+              <Route path="experts" element={<AdminTechnicians />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="reasons" element={<AdminReasons />} />
+              <Route path="dealers" element={<AdminDealers />} />
+              <Route path="feedback" element={<AdminFeedback />} />
+            </Route>
           </Routes>
         </motion.div>
       </AnimatePresence>

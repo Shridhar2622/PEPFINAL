@@ -42,7 +42,7 @@ const PartnerLandingPage = () => {
                                 Become a Partner <ArrowRight className="w-5 h-5" />
                             </Link>
                             <Link
-                                to="/login"
+                                to="/technician/login"
                                 className="text-slate-600 dark:text-slate-400 font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             >
                                 Already a partner? Sign In

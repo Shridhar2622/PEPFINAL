@@ -4,11 +4,12 @@ import { useUser } from '../../context/UserContext';
 import { Switch } from '@headlessui/react';
 import {
     LayoutDashboard, ClipboardList, Wallet, User,
-    Bell, Clock, X, TrendingUp, Star, Loader, Check
+    Bell, Clock, X, TrendingUp, Star, Loader, Check, Sun, Moon
 } from 'lucide-react';
 import TechnicianServices from './TechnicianServices';
 import TechnicianBookings from './TechnicianBookings';
 import { toast } from 'react-hot-toast';
+import { useTheme } from '../../context/ThemeContext';
 
 const TechnicianDashboard = () => {
     const {
@@ -17,6 +18,7 @@ const TechnicianDashboard = () => {
         fetchTechnicianBookings, fetchTechnicianStats
     } = useTechnician();
     const { user, logout } = useUser();
+    const { theme, toggleTheme } = useTheme();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarOpen, setSidebarOpen] = useState(true);
     const [isStatusUpdating, setIsStatusUpdating] = useState(false);
@@ -104,10 +106,19 @@ const TechnicianDashboard = () => {
                             </Switch>
                         </div>
                     </div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <button
+                            onClick={toggleTheme}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-sm font-bold rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-700"
+                        >
+                            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                            {theme === 'dark' ? 'Light' : 'Dark'}
+                        </button>
+                    </div>
                     <button onClick={async () => {
                         await logout();
                         window.location.href = '/';
-                    }} className="w-full text-left px-4 py-2 text-red-500 text-sm font-bold hover:bg-red-50 rounded-lg transition-colors">
+                    }} className="w-full text-left px-4 py-2 text-red-500 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors">
                         Sign Out
                     </button>
                 </div>
@@ -122,6 +133,12 @@ const TechnicianDashboard = () => {
                         <h1 className="font-bold text-lg text-slate-900 dark:text-white">Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                        >
+                            {theme === 'dark' ? <Sun className="w-6 h-6 text-slate-600 dark:text-slate-400" /> : <Moon className="w-6 h-6 text-slate-600 dark:text-slate-400" />}
+                        </button>
                         <button
                             onClick={() => {
                                 fetchTechnicianBookings();
@@ -190,11 +207,11 @@ const TechnicianDashboard = () => {
                                     <div className="flex items-center justify-between mb-6">
                                         <h3 className="text-lg font-black text-slate-900 dark:text-white">New Requests</h3>
                                         <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-[10px] font-black uppercase rounded-lg">
-                                            {jobs?.filter(j => j.status === 'PENDING').length || 0} Pending
+                                            {jobs?.filter(j => ['PENDING', 'ASSIGNED'].includes(j.status)).length || 0} Pending
                                         </span>
                                     </div>
                                     <div className="space-y-4">
-                                        {jobs?.filter(j => j.status === 'PENDING').slice(0, 3).map(job => (
+                                        {jobs?.filter(j => ['PENDING', 'ASSIGNED'].includes(j.status)).slice(0, 3).map(job => (
                                             <div key={job._id} className="flex items-center gap-4 p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
                                                 <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl flex items-center justify-center font-bold">
                                                     {job.customer?.name?.[0] || 'U'}

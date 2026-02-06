@@ -152,9 +152,9 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
     }
   };
 
-  const handleCategoryClick = (category) => {
-    // Redirect to Services page with strict filtering using NAME because backend stores names
-    navigate('/services', { state: { category: category.name } });
+  const handleCategoryClick = (categoryId) => {
+    // Redirect to Services page with strict filtering
+    navigate('/services', { state: { category: categoryId } });
   };
 
   // Show only 7 services on Home Page as requested
@@ -311,7 +311,7 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                       <img
                         src={service.image}
                         alt={service.title}
-                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${activeCardId === service.id ? 'scale-110' : 'scale-100'}`}
+                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${String(activeCardId) === String(service._id || service.id) ? 'scale-110' : 'scale-100'}`}
                       />
                       <div className="absolute top-0 inset-x-0 h-16 bg-linear-to-b from-black/50 to-transparent"></div>
                       <div className="absolute top-5 left-5">

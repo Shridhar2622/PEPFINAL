@@ -16,8 +16,8 @@ const Button = ({
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-600 shadow-lg shadow-blue-600/20',
         secondary: 'bg-orange-500 text-white hover:bg-orange-600 focus:ring-orange-500 shadow-lg shadow-orange-500/20',
-        outline: 'border-2 border-slate-200 text-slate-700 hover:border-blue-600 hover:text-blue-600 focus:ring-slate-200',
-        ghost: 'text-slate-600 hover:bg-slate-100 focus:ring-slate-200',
+        outline: 'border-2 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-600 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 focus:ring-slate-200 dark:focus:ring-slate-800',
+        ghost: 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-slate-200 dark:focus:ring-slate-800',
     };
 
     const sizes = {

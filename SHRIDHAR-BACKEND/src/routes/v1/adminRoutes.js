@@ -20,6 +20,13 @@ router.post('/technicians', adminController.createTechnician);
 router.patch('/technicians/:id/approve', adminController.approveTechnician);
 router.patch('/technicians/:id/reject', adminController.rejectTechnician);
 
+// --- DEALER MANAGEMENT ---
+router.get('/dealers', adminController.getAllDealers);
+router.post('/dealers', adminController.createDealer);
+router.patch('/dealers/:id', adminController.updateDealer);
+router.delete('/dealers/:id', adminController.deleteDealer);
+router.patch('/dealers/:id/status', adminController.toggleDealerStatus);
+
 // --- SERVICE MANAGEMENT ---
 router.get('/services', adminController.getAllServices);
 router.patch('/services/:id/status', adminController.toggleServiceStatus);
@@ -27,6 +34,7 @@ router.patch('/services/:id/status', adminController.toggleServiceStatus);
 // --- BOOKING MANAGEMENT ---
 router.get('/bookings', adminController.getAllBookings);
 router.patch('/bookings/:id/cancel', adminController.cancelBooking);
+router.patch('/bookings/:id/assign', adminController.assignTechnician); // Body: { technicianId: string }
 
 // --- GLOBAL SETTINGS ---
 router.get('/settings', adminController.getSettings);

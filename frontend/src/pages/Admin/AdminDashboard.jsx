@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAdmin } from '../../context/AdminContext';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { Shield, Layout, Wallet, Share2, LogOut, Settings, ChevronRight, Zap, Wrench, Users, Plus, Edit2, Check, X, Search, Star, Phone, Mail, Sparkles, Tag, PlusCircle, FolderPlus, MessageSquarePlus, Clock, User as UserIcon, Image as ImageIcon, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminDashboard = () => {
-    const { isAdminAuthenticated, appSettings, categories, services, technicians, users, feedbacks, reviews, allBookings, dashboardStats, logout, toggleSetting, updateServicePrice, updateSubServicePrice, toggleSubService, updateTechnician, addTechnician, addCategory, addService, approveTechnician, rejectTechnician, toggleUserStatus, deleteReview, cancelBooking } = useAdmin();
+    const { isAdminAuthenticated, appSettings, categories, services, technicians, users, feedbacks, reviews, allBookings, dashboardStats, reasons, addReason, deleteReason, dealers, addDealer, deleteDealer, toggleDealerStatus, assignTechnician, logout, toggleSetting, updateServicePrice, updateSubServicePrice, toggleSubService, updateTechnician, addTechnician, addCategory, addService, approveTechnician, rejectTechnician, toggleUserStatus, deleteReview, cancelBooking } = useAdmin();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = React.useState('overview');
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -15,9 +16,13 @@ const AdminDashboard = () => {
     // New Creation States
     const [isAddingCategory, setIsAddingCategory] = React.useState(false);
     const [isAddingService, setIsAddingService] = React.useState(false);
+    const [isAddingReason, setIsAddingReason] = React.useState(false);
+    const [isAddingDealer, setIsAddingDealer] = React.useState(false);
 
     const [newCategory, setNewCategory] = React.useState({ name: '', description: '', image: '', icon: 'Hammer', color: 'bg-indigo-100 text-indigo-600' });
     const [newService, setNewService] = React.useState({ title: '', category: '', price: '', image: '', description: '' });
+    const [newReason, setNewReason] = React.useState({ reason: '', type: 'REGULAR' });
+    const [newDealer, setNewDealer] = React.useState({ name: '', phone: '', email: '', address: '' });
 
     // Document Viewing State
     const [viewingDocsBy, setViewingDocsBy] = React.useState(null);
@@ -56,6 +61,8 @@ const AdminDashboard = () => {
         { id: 'experts', label: 'Experts', icon: Users },
         { id: 'bookings', label: 'Bookings', icon: Clock },
         { id: 'users', label: 'Users', icon: UserIcon },
+        { id: 'reasons', label: 'Reasons', icon: Tag },
+        { id: 'dealers', label: 'Dealers', icon: Users },
         { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
     ];
 
@@ -101,6 +108,21 @@ const AdminDashboard = () => {
         setIsAddingCategory(true);
         // Scroll to top to ensure modal is visible
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleAddReason = async (e) => {
+        e.preventDefault();
+        if (!newReason.reason) return;
+        setActionLoading(prev => ({ ...prev, addReason: true }));
+        try {
+            await addReason(newReason);
+            setIsAddingReason(false);
+            setNewReason({ reason: '', type: 'REGULAR' });
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setActionLoading(prev => ({ ...prev, addReason: false }));
+        }
     };
 
     return (
@@ -530,7 +552,8 @@ const AdminDashboard = () => {
                                                 <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Customer</th>
                                                 <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Expert</th>
                                                 <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Scheduled At</th>
-                                                <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Price</th>
+                                                <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Reason</th>
+                                                <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Total Payout</th>
                                                 <th className="text-left p-5 text-[10px] font-black uppercase text-slate-400">Status</th>
                                                 <th className="text-right p-5 text-[10px] font-black uppercase text-slate-400">Action</th>
                                             </tr>
@@ -547,29 +570,95 @@ const AdminDashboard = () => {
                                                     <td className="p-5 text-[10px] font-black text-slate-500 uppercase">
                                                         {new Date(booking.scheduledAt).toLocaleDateString()} at {new Date(booking.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </td>
-                                                    <td className="p-5 text-xs font-black text-slate-900 dark:text-white">₹{booking.price}</td>
+                                                    <td className="p-5 text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                        {booking.extraReason?.reason || '-'}
+                                                    </td>
+                                                    <td className="p-5">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-black text-slate-900 dark:text-white">₹{booking.finalAmount || booking.price}</span>
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {booking.partImages?.map((img, idx) => (
+                                                                    <a
+                                                                        key={idx}
+                                                                        href={img.startsWith('http') ? img : `/uploads/bills/${img}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-blue-600 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/20 p-1 rounded-md transition-all h-6 w-6 flex items-center justify-center"
+                                                                        title="View Proof"
+                                                                    >
+                                                                        <ImageIcon className="w-3.5 h-3.5" />
+                                                                    </a>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </td>
                                                     <td className="p-5">
                                                         <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${booking.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : (booking.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700')}`}>
                                                             {booking.status}
                                                         </span>
                                                     </td>
                                                     <td className="p-5 text-right">
-                                                        {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
-                                                            <button
-                                                                disabled={actionLoading[booking._id]}
-                                                                onClick={async () => {
-                                                                    if (window.confirm('Force cancel this booking?')) {
-                                                                        setActionLoading(prev => ({ ...prev, [booking._id]: true }));
-                                                                        await cancelBooking(booking._id);
-                                                                        setActionLoading(prev => ({ ...prev, [booking._id]: false }));
-                                                                    }
-                                                                }}
-                                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                                                title="Force Cancel"
-                                                            >
-                                                                {actionLoading[booking._id] ? <Loader className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                                                            </button>
-                                                        )}
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {booking.status === 'PENDING' && (
+                                                                <select
+                                                                    disabled={actionLoading[booking._id]}
+                                                                    onChange={async (e) => {
+                                                                        const techId = e.target.value;
+                                                                        if (techId) {
+                                                                            setActionLoading(prev => ({ ...prev, [booking._id]: true }));
+                                                                            await assignTechnician(booking._id, techId);
+                                                                            setActionLoading(prev => ({ ...prev, [booking._id]: false }));
+                                                                        }
+                                                                    }}
+                                                                    className="text-[10px] font-bold p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                                >
+                                                                    <option value="">Assign Expert</option>
+                                                                    {technicians.filter(t => t.documents?.verificationStatus === 'VERIFIED').map(t => (
+                                                                        <option key={t._id || t.id} value={t._id || t.id}>{t.name || t.user?.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
+                                                            {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+                                                                <div className="flex gap-1">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const text = `Service assigned: ${booking.service?.title} order #${booking._id.slice(-6)}. Expert ${booking.technician?.name} will contact you shortly.`;
+                                                                            navigator.clipboard.writeText(text);
+                                                                            toast.success("Assignment SMS copied");
+                                                                        }}
+                                                                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded"
+                                                                        title="Copy Assignment SMS"
+                                                                    >
+                                                                        <MessageSquarePlus className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const text = `Happy PIN for your ${booking.service?.title} is ${booking.securityPin}. Please share only after service completion.`;
+                                                                            navigator.clipboard.writeText(text);
+                                                                            toast.success("PIN SMS copied");
+                                                                        }}
+                                                                        className="p-1.5 text-orange-500 hover:bg-orange-50 rounded"
+                                                                        title="Copy PIN SMS"
+                                                                    >
+                                                                        <Zap className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        disabled={actionLoading[booking._id]}
+                                                                        onClick={async () => {
+                                                                            if (window.confirm('Force cancel this booking?')) {
+                                                                                setActionLoading(prev => ({ ...prev, [booking._id]: true }));
+                                                                                await cancelBooking(booking._id);
+                                                                                setActionLoading(prev => ({ ...prev, [booking._id]: false }));
+                                                                            }
+                                                                        }}
+                                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                                                                        title="Force Cancel"
+                                                                    >
+                                                                        {actionLoading[booking._id] ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -644,6 +733,53 @@ const AdminDashboard = () => {
                                 {users.length === 0 && (
                                     <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-widest">
                                         No users found
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'reasons' && (
+                        <motion.div
+                            key="reasons"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white">Extra Charge Reasons</h3>
+                                <button
+                                    onClick={() => setIsAddingReason(true)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all"
+                                >
+                                    <Plus className="w-4 h-4" /> Add Reason
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {reasons.map((r) => (
+                                    <div key={r._id || r.id} className="bg-white dark:bg-slate-900 p-5 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between group">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${r.type === 'TRANSPORT' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                {r.type === 'TRANSPORT' ? 'T' : 'R'}
+                                            </div>
+                                            <div>
+                                                <h4 className="font-black text-slate-900 dark:text-white text-sm">{r.reason}</h4>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{r.type} CHARGE</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => { if (window.confirm('Delete this reason?')) deleteReason(r._id || r.id) }}
+                                            className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {reasons.length === 0 && (
+                                    <div className="col-span-full py-12 text-center bg-white dark:bg-slate-900 rounded-4xl border border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase text-xs tracking-widest">
+                                        No reasons defined
                                     </div>
                                 )}
                             </div>
@@ -893,6 +1029,42 @@ const AdminDashboard = () => {
                         </div>
                     )}
 
+                    {isAddingReason && (
+                        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddingReason(false)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+                            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative bg-white dark:bg-slate-900 w-full max-w-lg rounded-4xl md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] overflow-y-auto font-outfit">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">Define New Extra Reason</h3>
+                                    <button onClick={() => setIsAddingReason(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+                                </div>
+                                <form onSubmit={handleAddReason} className="space-y-6">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Reason Description</label>
+                                        <input required type="text" value={newReason.reason} onChange={e => setNewReason({ ...newReason, reason: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none focus:ring-2 ring-indigo-500/20 text-sm font-bold dark:text-white placeholder:text-slate-400" placeholder="e.g. Spare Parts Replacement" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Type of Charge</label>
+                                        <select
+                                            value={newReason.type}
+                                            onChange={e => setNewReason({ ...newReason, type: e.target.value })}
+                                            className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border-none focus:ring-2 ring-indigo-500/20 text-sm font-black dark:text-white appearance-none uppercase tracking-widest"
+                                        >
+                                            <option value="REGULAR">REGULAR SERVICE</option>
+                                            <option value="TRANSPORT">TRANSPORT CHARGE</option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={actionLoading.addReason}
+                                        className="w-full py-5 bg-indigo-600 text-white rounded-[1.5rem] text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                        {actionLoading.addReason ? <Loader className="w-5 h-5 animate-spin" /> : <><PlusCircle className="w-5 h-5" /> Submit New Reason</>}
+                                    </button>
+                                </form>
+                            </motion.div>
+                        </div>
+                    )}
+
                     {viewingDocsBy && (
                         <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setViewingDocsBy(null)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
@@ -979,6 +1151,148 @@ const AdminDashboard = () => {
                                         </button>
                                     </div>
                                 </div>
+                            </motion.div>
+                        </div>
+                    )}
+
+                    {activeTab === 'dealers' && (
+                        <motion.div
+                            key="dealers"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white">Authorized Dealers</h3>
+                                <button
+                                    onClick={() => setIsAddingDealer(true)}
+                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
+                                >
+                                    <PlusCircle className="w-4 h-4" /> Add Dealer
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {dealers.map((dealer) => (
+                                    <div key={dealer._id} className="bg-white dark:bg-slate-900 p-6 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-sm group hover:border-indigo-500/50 transition-all">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                                                <UserIcon className="w-6 h-6" />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => toggleDealerStatus(dealer._id)}
+                                                    className={`p-1.5 rounded-lg transition-colors ${dealer.isActive ? 'text-green-600 bg-green-50' : 'text-slate-400 bg-slate-50'}`}
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { if (window.confirm('Delete this dealer?')) deleteDealer(dealer._id) }}
+                                                    className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-all"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <h4 className="font-black text-slate-900 dark:text-white mb-1 uppercase tracking-tight">{dealer.name}</h4>
+                                        <p className="text-xs text-slate-500 font-medium mb-4">{dealer.address}</p>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase">
+                                                <Phone className="w-3 h-3" /> {dealer.phone}
+                                            </div>
+                                            {dealer.email && (
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase">
+                                                    <Mail className="w-3 h-3" /> {dealer.email}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {dealers.length === 0 && (
+                                <div className="p-12 bg-white dark:bg-slate-900 rounded-4xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                        <Users className="w-8 h-8" />
+                                    </div>
+                                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">No Dealers Registered</h3>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {isAddingDealer && (
+                        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden"
+                            >
+                                <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Add New Dealer</h3>
+                                    <button onClick={() => setIsAddingDealer(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400">
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+                                <form className="p-8 space-y-4" onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    await addDealer(newDealer);
+                                    setIsAddingDealer(false);
+                                    setNewDealer({ name: '', phone: '', email: '', address: '' });
+                                }}>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Dealer Name</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={newDealer.name}
+                                            onChange={(e) => setNewDealer({ ...newDealer, name: e.target.value })}
+                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all"
+                                            placeholder="Enter dealer name"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Phone Number</label>
+                                            <input
+                                                required
+                                                type="tel"
+                                                value={newDealer.phone}
+                                                onChange={(e) => setNewDealer({ ...newDealer, phone: e.target.value })}
+                                                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all"
+                                                placeholder="9876543210"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email (Optional)</label>
+                                            <input
+                                                type="email"
+                                                value={newDealer.email}
+                                                onChange={(e) => setNewDealer({ ...newDealer, email: e.target.value })}
+                                                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all"
+                                                placeholder="dealer@example.com"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Office Address</label>
+                                        <textarea
+                                            required
+                                            value={newDealer.address}
+                                            onChange={(e) => setNewDealer({ ...newDealer, address: e.target.value })}
+                                            rows={2}
+                                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent focus:border-indigo-500 rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all"
+                                            placeholder="Full address of the dealer"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 rounded-2xl font-black text-sm uppercase tracking-widest transition-all mt-4"
+                                    >
+                                        Register Dealer
+                                    </button>
+                                </form>
                             </motion.div>
                         </div>
                     )}

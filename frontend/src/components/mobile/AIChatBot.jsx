@@ -3,12 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Sparkles, X, Send, User } from 'lucide-react';
 import { useUser } from '../../context/UserContext';
 import { useSound } from '../../context/SoundContext';
+import client from '../../api/client';
 
 const AIChatBot = () => {
-    const { isChatOpen, setIsChatOpen } = useUser();
+    const { isChatOpen, setIsChatOpen, user } = useUser();
     const { playGlassSound } = useSound();
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [input, setInput] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
     const [messages, setMessages] = useState([
         { id: 1, text: "Hello! I'm your Reservice AI. How can I help you today?", sender: 'bot' }
     ]);
@@ -26,36 +28,45 @@ const AIChatBot = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages, isTyping]);
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || isTyping) return;
 
-        // Add user message
-        const userMsg = { id: Date.now(), text: input, sender: 'user' };
+        const userMsgText = input.trim();
+        const userMsg = { id: Date.now(), text: userMsgText, sender: 'user' };
+
         setMessages(prev => [...prev, userMsg]);
         setInput('');
+        setIsTyping(true);
         playGlassSound();
 
-        // Simulate AI response
-        setTimeout(() => {
+        try {
+            // Call our new backend AI endpoint
+            const { data } = await client.post('/ai/chat', {
+                message: userMsgText,
+                history: messages.slice(-5) // Send last 5 messages for context
+            });
+
             const botResponse = {
                 id: Date.now() + 1,
-                text: getSimulatedResponse(input),
+                text: data.data.reply,
                 sender: 'bot'
             };
             setMessages(prev => [...prev, botResponse]);
             playGlassSound();
-        }, 1000);
-    };
-
-    const getSimulatedResponse = (query) => {
-        const q = query.toLowerCase();
-        if (q.includes('price')) return "Our starting price for home cleaning is ₹499. Would you like to see our full price list?";
-        if (q.includes('repair')) return "We have expert technicians available for all kinds of repairs. Which service do you need?";
-        if (q.includes('hello') || q.includes('hi')) return "Hi there! I'm ready to help you find the best service for your home.";
-        return "That's interesting! Let me find more information about that for you.";
+        } catch (error) {
+            console.error('AI Chat Error:', error);
+            const errorMsg = {
+                id: Date.now() + 1,
+                text: "I'm sorry, I'm having trouble connecting to my brain right now. Please try again later.",
+                sender: 'bot'
+            };
+            setMessages(prev => [...prev, errorMsg]);
+        } finally {
+            setIsTyping(false);
+        }
     };
 
     return (
@@ -174,6 +185,26 @@ const AIChatBot = () => {
                                         </div>
                                     </motion.div>
                                 ))}
+                                {isTyping && (
+                                    <motion.div
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="flex justify-start"
+                                    >
+                                        <div className="flex items-end gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-rose-500 flex items-center justify-center shrink-0">
+                                                <Bot className="w-4 h-4 text-white" />
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-bl-none">
+                                                <div className="flex gap-1.5">
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                    <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-bounce"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 

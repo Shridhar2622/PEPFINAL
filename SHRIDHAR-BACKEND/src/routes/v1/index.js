@@ -9,6 +9,8 @@ const bookingRoutes = require('./bookingRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const adminRoutes = require('./adminRoutes');
 const categoryRoutes = require('./categoryRoutes');
+const aiRoutes = require('./aiRoutes');
+const reasonRoutes = require('./reasonRoutes'); // Added reasonRoutes
 
 router.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', message: 'Server is healthy' });
@@ -21,6 +23,8 @@ router.use('/services', serviceRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/reviews', require('./reviewRoutes'));
+router.use('/ai', aiRoutes);
+router.use('/reasons', reasonRoutes); // Added reasons route
 
 // --- ENABLED ENDPOINTS ---
 router.use('/notifications', notificationRoutes);

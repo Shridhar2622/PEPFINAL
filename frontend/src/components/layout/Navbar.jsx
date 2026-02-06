@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Wrench, User, Moon, Sun, Bot, MapPin, LogOut } from 'lucide-react';
+import { Menu, X, Wrench, User, Moon, Sun, Bot, MapPin } from 'lucide-react';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
@@ -11,7 +11,7 @@ const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const location = useLocation();
     const { theme, toggleTheme } = useTheme();
-    const { setIsChatOpen, isAuthenticated, user, logout } = useUser();
+    const { setIsChatOpen, isAuthenticated, user } = useUser();
     const { playGlassSound } = useSound();
     const [locationName, setLocationName] = useState(() => {
         return localStorage.getItem('user_location') || null;
@@ -159,32 +159,22 @@ const Navbar = () => {
                                         Log in
                                     </Button>
                                 </Link>
-
-                            </>
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <Link to={user?.role === 'TECHNICIAN' ? "/technician/dashboard" : "/profile"}>
-                                    <Button
-                                        size="sm"
-                                        className={`flex items-center gap-2 font-bold ${isTransparent ? 'bg-white/20 text-white hover:bg-white/30 border-white/50 shadow-lg' : 'bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20'}`}
-                                    >
-                                        <User className="w-4 h-4" />
-                                        <span>{user?.role === 'TECHNICIAN' ? 'Dashboard' : 'Profile'}</span>
+                                <Link to="/register">
+                                    <Button size="sm" className={isTransparent ? 'shadow-lg shadow-blue-500/30' : 'dark:bg-blue-600 dark:hover:bg-blue-700'}>
+                                        Sign up
                                     </Button>
                                 </Link>
-                                <button
-                                    onClick={async () => {
-                                        if (window.confirm('Logout?')) {
-                                            await logout();
-                                            window.location.href = '/';
-                                        }
-                                    }}
-                                    className={`p-2 rounded-xl transition-all duration-300 active:scale-95 ${isTransparent ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-slate-100 dark:bg-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
-                                    title="Logout"
+                            </>
+                        ) : (
+                            <Link to={user?.role === 'TECHNICIAN' ? "/technician/dashboard" : "/profile"}>
+                                <Button
+                                    size="sm"
+                                    className={`flex items-center gap-2 font-bold ${isTransparent ? 'bg-white/20 text-white hover:bg-white/30 border-white/50 shadow-lg' : 'bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20'}`}
                                 >
-                                    <LogOut className="w-5 h-5" />
-                                </button>
-                            </div>
+                                    <User className="w-4 h-4" />
+                                    <span>{user?.role === 'TECHNICIAN' ? 'Dashboard' : 'Profile'}</span>
+                                </Button>
+                            </Link>
                         )}
                     </div>
 
@@ -206,7 +196,7 @@ const Navbar = () => {
 
             {/* Mobile Menu */}
             {isMenuOpen && (
-                <div className="md:hidden border-t border-slate-100 bg-white absolute w-full left-0 shadow-lg top-16">
+                <div className="md:hidden border-t border-slate-100 bg-white dark:bg-slate-900 absolute w-full left-0 shadow-lg top-16">
                     <div className="px-4 pt-2 pb-6 space-y-1">
                         {navLinks.map((link) => (
                             <NavLink
@@ -215,34 +205,25 @@ const Navbar = () => {
                                 onClick={() => setIsMenuOpen(false)}
                                 className={({ isActive }) =>
                                     `block px-3 py-3 rounded-md text-base font-medium ${isActive
-                                        ? 'bg-blue-50 text-blue-600'
-                                        : 'text-slate-600 hover:bg-slate-50 hover:text-blue-600'
+                                        ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400'
                                     }`
                                 }
                             >
                                 {link.name}
                             </NavLink>
                         ))}
-                        <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-3">
-                            {!isAuthenticated ? (
-                                <Link to="/login" onClick={() => setIsMenuOpen(false)}>
-                                    <Button variant="ghost" className="w-full justify-start text-slate-600">
-                                        Log in
-                                    </Button>
-                                </Link>
-                            ) : (
-                                <button
-                                    onClick={async () => {
-                                        setIsMenuOpen(false);
-                                        await logout();
-                                        window.location.href = '/';
-                                    }}
-                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                    <LogOut className="w-5 h-5" />
-                                    Logout
-                                </button>
-                            )}
+                        <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-3">
+                            <Link to="/login" onClick={() => setIsMenuOpen(false)}>
+                                <Button variant="ghost" className="w-full justify-start text-slate-600 dark:text-slate-400">
+                                    Log in
+                                </Button>
+                            </Link>
+                            <Link to="/register" onClick={() => setIsMenuOpen(false)}>
+                                <Button className="w-full">
+                                    Sign up
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 </div>

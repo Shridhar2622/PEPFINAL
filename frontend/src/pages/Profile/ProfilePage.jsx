@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Phone, Mail, MapPin, ChevronRight, LogOut, Settings, CreditCard, Heart, Wrench, Facebook, Twitter, Instagram, Check, MessageSquarePlus, Send, AlertCircle, Loader } from 'lucide-react';
+import { User, Phone, Mail, MapPin, ChevronRight, LogOut, Settings, CreditCard, Heart, Wrench, Facebook, Twitter, Instagram, Check, MessageSquarePlus, Send, AlertCircle } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSound } from '../../context/SoundContext';
@@ -10,41 +10,12 @@ import MobileBottomNav from '../../components/mobile/MobileBottomNav';
 const ProfilePage = () => {
   const { user, isAuthenticated, updateProfile, logout, submitFeedback, isLoading } = useUser();
   const { isSoundEnabled, setIsSoundEnabled } = useSound();
-  const { appSettings } = useAdmin();
+  const { systemSettings } = useAdmin();
   const navigate = useNavigate();
   const [feedbackText, setFeedbackText] = React.useState('');
   const [feedbackCategory, setFeedbackCategory] = React.useState('Improvements');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false);
-  const [isUpdatingProfile, setIsUpdatingProfile] = React.useState(false);
   const [feedbackSent, setFeedbackSent] = React.useState(false);
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = React.useState(false);
-  const [generatedAvatars, setGeneratedAvatars] = React.useState([]);
-
-  React.useEffect(() => {
-    if (isAvatarModalOpen) {
-      generateAvatars();
-    }
-  }, [isAvatarModalOpen]);
-
-  const generateAvatars = () => {
-    const seeds = Array.from({ length: 9 }, () => Math.random().toString(36).substring(7));
-    const newAvatars = seeds.map(seed => `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`);
-    setGeneratedAvatars(newAvatars);
-  };
-
-  const handleSelectAvatar = async (avatarUrl) => {
-    setIsUpdatingProfile(true);
-    try {
-      await updateProfile({ profilePhoto: avatarUrl });
-    } finally {
-      setIsUpdatingProfile(false);
-      setIsAvatarModalOpen(false);
-    }
-  };
-
-  const handleCameraClick = () => {
-    setIsAvatarModalOpen(true);
-  };
 
   const feedbackCategories = [
     { id: 'Improvements', icon: '✨' },
@@ -55,45 +26,24 @@ const ProfilePage = () => {
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate('/login');
-    } else if (!isLoading && isAuthenticated && user?.role === 'TECHNICIAN') {
-      navigate('/technician/dashboard');
     }
-  }, [isLoading, isAuthenticated, user, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#050508]"><div className="animate-spin w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full"></div></div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950"><div className="animate-spin w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full"></div></div>;
 
   if (!isAuthenticated && !user) return null; // Wait for redirect
 
-
-
   const handleEditProfile = () => {
     const newName = prompt('Enter your name:', user.name);
-    const newPhone = prompt('Enter your phone number:', user.phone || '');
-    const newAddress = prompt('Enter your primary address:', user.address || '');
-
-    const updates = {};
-    if (newName && newName !== user.name) updates.name = newName;
-    if (newPhone !== undefined && newPhone !== user.phone) updates.phone = newPhone;
-    if (newAddress !== undefined && newAddress !== user.address) updates.address = newAddress;
-
-    if (Object.keys(updates).length > 0) {
-      updateProfile(updates);
+    if (newName) {
+      updateProfile({ name: newName });
     }
   };
 
-
-
-
-
-  const handleLogout = async () => {
+  const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      setIsUpdatingProfile(true);
-      try {
-        await logout();
-        navigate('/');
-      } finally {
-        setIsUpdatingProfile(false);
-      }
+      logout();
+      navigate('/');
     }
   };
 
@@ -122,8 +72,13 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#050508] transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
+      {/* Background Dots */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px] opacity-10 dark:opacity-5" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
 
         {/* --- DESKTOP VIEW --- */}
         <div className="hidden md:grid grid-cols-12 gap-8 items-start">
@@ -131,19 +86,12 @@ const ProfilePage = () => {
           {/* Sidebar (cols 1-4) */}
           <div className="col-span-4 space-y-6">
             {/* Profile Summary Card */}
-            <div className="bg-white dark:bg-[#0b0b14] rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800/50 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800/50 overflow-hidden">
               <div className="h-24 bg-gradient-to-r from-rose-500/20 to-orange-500/20"></div>
               <div className="px-6 pb-6 text-center">
-                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#0b0b14] shadow-xl mx-auto -mt-12 overflow-hidden bg-white dark:bg-slate-800 relative group cursor-pointer" onClick={handleCameraClick}>
-                  <img
-                    src={user.profilePhoto?.startsWith('http') ? user.profilePhoto : `/uploads/users/${user.profilePhoto}`}
-                    alt={user.name}
-                    className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Settings className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-[#0b0b14]">
+                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-xl mx-auto -mt-12 overflow-hidden bg-white dark:bg-slate-800 relative">
+                  <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900">
                     <Check className="w-3 h-3 text-white stroke-[4px]" />
                   </div>
                 </div>
@@ -161,7 +109,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Menu Items Card */}
-            <div className="bg-white dark:bg-[#0b0b14] rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800/50 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800/50 overflow-hidden">
               <div className="p-2 space-y-1">
                 {menuItems.map((item, index) => (
                   <Link
@@ -199,8 +147,8 @@ const ProfilePage = () => {
           <div className="col-span-8 space-y-8">
             <div className="grid grid-cols-2 gap-8">
               {/* Wallet Card */}
-              {appSettings.showWallet && (
-                <div className="bg-gradient-to-br from-slate-900 to-[#0b0b14] dark:from-rose-600 dark:to-rose-700 rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden group">
+              {systemSettings.showWallet && (
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-6">
@@ -224,8 +172,8 @@ const ProfilePage = () => {
 
               <div className="space-y-6">
                 {/* Refer & Earn Banner */}
-                {appSettings.showReferralBanner && (
-                  <div className="bg-white dark:bg-[#11111f] rounded-3xl p-6 border border-slate-100 dark:border-slate-800/50 shadow-sm flex items-center gap-5 relative overflow-hidden group">
+                {systemSettings.showReferralBanner && (
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/50 shadow-sm flex items-center gap-5 relative overflow-hidden group">
                     <div className="w-16 h-16 rounded-[1.5rem] bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 group-hover:rotate-12 transition-transform">
                       <Heart className="w-8 h-8 animate-pulse" />
                     </div>
@@ -248,7 +196,7 @@ const ProfilePage = () => {
             </div>
 
             {/* Feedback & Requests Section */}
-            <div className="bg-white dark:bg-[#0b0b14] rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800/50 p-10">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800/50 p-10">
               <div className="flex items-center gap-6 mb-10">
                 <div className="w-16 h-16 rounded-[1.5rem] bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
                   <MessageSquarePlus className="w-8 h-8" />
@@ -328,15 +276,8 @@ const ProfilePage = () => {
             </div>
             <div className="px-6 pb-6 relative">
               <div className="flex flex-col items-center -mt-12 mb-4 gap-4">
-                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-md overflow-hidden bg-white dark:bg-slate-800 relative group cursor-pointer" onClick={handleCameraClick}>
-                  <img
-                    src={user.profilePhoto?.startsWith('http') ? user.profilePhoto : `/uploads/users/${user.profilePhoto}`}
-                    alt={user.name}
-                    className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Settings className="w-6 h-6 text-white" />
-                  </div>
+                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-md overflow-hidden bg-white dark:bg-slate-800 relative">
+                  <img src={user.image} alt={user.name} className="w-full h-full object-cover" />
                   <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900 shadow-lg">
                     <Check className="w-3 h-3 text-white stroke-[4px]" />
                   </div>
@@ -367,7 +308,7 @@ const ProfilePage = () => {
           </div>
 
           {/* Admin Controlled: Wallet Card */}
-          {appSettings.showWallet && (
+          {systemSettings.showWallet && (
             <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-2xl p-6 shadow-lg mb-6 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
               <div className="relative z-10">
@@ -391,7 +332,7 @@ const ProfilePage = () => {
           )}
 
           {/* Admin Controlled: Refer & Earn Banner */}
-          {appSettings.showReferralBanner && (
+          {systemSettings.showReferralBanner && (
             <div className="bg-rose-50 dark:bg-rose-500/10 rounded-2xl p-5 border border-rose-100 dark:border-rose-500/20 mb-6 flex items-center gap-4 relative overflow-hidden">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
                 <Heart className="w-6 h-6 animate-pulse" />
@@ -589,47 +530,6 @@ const ProfilePage = () => {
         </div>
 
       </div>
-
-
-      {/* Avatar Selection Modal */}
-      {isAvatarModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-4xl p-6 max-w-md w-full shadow-2xl scale-100 animate-scale-in border border-slate-100 dark:border-slate-800">
-            <h3 className="text-xl font-black text-slate-900 dark:text-white text-center mb-2">Choose Your Look</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center text-sm mb-6">Select an avatar for your profile.</p>
-
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              {generatedAvatars.map((avatar, index) => (
-                <button
-                  key={index}
-                  disabled={isUpdatingProfile}
-                  onClick={() => handleSelectAvatar(avatar)}
-                  className="aspect-square rounded-2xl bg-slate-50 dark:bg-slate-800 p-2 hover:scale-110 hover:shadow-lg transition-all border-2 border-transparent hover:border-rose-500 disabled:opacity-50 disabled:scale-100 flex items-center justify-center"
-                >
-                  {isUpdatingProfile ? <Loader className="w-4 h-4 animate-spin text-rose-500" /> : <img src={avatar} alt={`Avatar ${index}`} className="w-full h-full object-contain" />}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={generateAvatars}
-                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                Shuffle Avatars 🎲
-              </button>
-
-              <button
-                onClick={() => setIsAvatarModalOpen(false)}
-                className="mt-2 w-full py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-bold uppercase tracking-widest transition-colors"
-                id="cancel-avatar-picker"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

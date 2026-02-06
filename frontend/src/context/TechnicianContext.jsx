@@ -14,6 +14,7 @@ export const TechnicianProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [jobs, setJobs] = useState([]);
     const [reviews, setReviews] = useState([]);
+    const [reasons, setReasons] = useState([]);
 
     // Fetch Technician Profile if user is a TECHNICIAN
     useEffect(() => {
@@ -183,12 +184,22 @@ export const TechnicianProvider = ({ children }) => {
         }
     };
 
+    const fetchReasons = async () => {
+        try {
+            const res = await client.get('/reasons');
+            setReasons(res.data.data.reasons);
+        } catch (error) {
+            console.error("Error fetching reasons", error);
+        }
+    };
+
     // Initial Data Load
     useEffect(() => {
         if (isAuthenticated && user?.role === 'TECHNICIAN') {
             fetchTechnicianStats();
             fetchTechnicianBookings();
             fetchTechnicianReviews();
+            fetchReasons();
         }
     }, [isAuthenticated, user, technicianProfile?._id]);
 
@@ -204,9 +215,29 @@ export const TechnicianProvider = ({ children }) => {
         return () => clearInterval(interval);
     }, [isAuthenticated, user]);
 
-    const updateBookingStatus = async (bookingId, status) => {
+    const updateBookingStatus = async (bookingId, status, completionData = null) => {
         try {
-            await client.patch(`/bookings/${bookingId}/status`, { status });
+            let data = { status };
+            let headers = {};
+
+            if (completionData) {
+                if (completionData.billImage) {
+                    // Use FormData for file upload
+                    const formData = new FormData();
+                    formData.append('status', status);
+                    formData.append('securityPin', completionData.securityPin);
+                    formData.append('finalAmount', completionData.finalAmount);
+                    if (completionData.extraReason) formData.append('extraReason', completionData.extraReason);
+                    if (completionData.technicianNote) formData.append('technicianNote', completionData.technicianNote);
+                    formData.append('billImage', completionData.billImage);
+                    data = formData;
+                    headers = { 'Content-Type': 'multipart/form-data' };
+                } else {
+                    data = { ...data, ...completionData };
+                }
+            }
+
+            await client.patch(`/bookings/${bookingId}/status`, data, { headers });
             toast.success(`Booking ${status.toLowerCase().replace('_', ' ')} successfully`);
             fetchTechnicianBookings(); // Refresh list
             fetchTechnicianStats(); // Refresh stats (e.g. if completed)
@@ -223,6 +254,7 @@ export const TechnicianProvider = ({ children }) => {
         stats,
         jobs,
         reviews,
+        reasons,
         createProfile,
         uploadDocuments,
         updateStatus,
@@ -230,6 +262,7 @@ export const TechnicianProvider = ({ children }) => {
         fetchTechnicianBookings,
         fetchTechnicianStats,
         fetchTechnicianReviews,
+        fetchReasons,
         updateBookingStatus
     };
 

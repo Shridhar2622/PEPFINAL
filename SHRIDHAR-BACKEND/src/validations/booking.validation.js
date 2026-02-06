@@ -24,7 +24,11 @@ const updateBookingStatus = {
         bookingId: Joi.string().required()
     }),
     body: Joi.object().keys({
-        status: Joi.string().valid('ACCEPTED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED').required()
+        status: Joi.string().valid('ACCEPTED', 'REJECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED').required(),
+        finalAmount: Joi.number().optional(),
+        extraReason: Joi.string().optional(),
+        technicianNote: Joi.string().max(1000).allow('').optional(),
+        securityPin: Joi.string().optional()
     })
 };
 

@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Search, ArrowRight, ShieldCheck, Clock, Award, Hammer, Zap, Refrigerator, Droplets, Truck, Calendar, Map, CheckCircle } from 'lucide-react';
-
-// import { useAdmin } from '../../context/AdminContext';
+import { useAdmin } from '../../context/AdminContext';
 import ServiceCard from '../../components/common/ServiceCard';
 import ServiceStack from '../../components/home/ServiceStack';
 import Button from '../../components/common/Button';
@@ -12,13 +11,14 @@ import Particles from '../../react-bit/Particle';
 import BookingModal from '../../components/bookings/BookingModal';
 import { useBookings } from '../../context/BookingContext';
 import { useNavigate } from 'react-router-dom';
-import client from '../../api/client';
 
 import promoImg from '../../assets/images/fridge-repair.png';
 import MobileHomePage from './MobileHomePage';
 import SplitText from '../../react-bit/SplitText';
 import TextType from '../../react-bit/TextType';
-import SupermanWorker from '../../components/home/SupermanWorker';
+import SupermanTechnician from '../../components/home/SupermanTechnician';
+import { motion, AnimatePresence } from 'framer-motion';
+import MobileServiceDetail from '../Services/MobileServiceDetail';
 
 
 const iconMap = {
@@ -39,35 +39,7 @@ const placeholders = [
 const particleColors = ['#ffffff', '#aaacb9'];
 
 const HomePage = () => {
-  // const { services, categories } = useAdmin(); // REMOVED
-  // Local state for public data
-  const [services, setServices] = useState([]);
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    const fetchPublicData = async () => {
-      try {
-        const [servicesRes, categoriesRes] = await Promise.all([
-          client.get('/services'),
-          client.get('/categories')
-        ]);
-
-        if (servicesRes.data.data) {
-          const rawServices = servicesRes.data.data.services || servicesRes.data.data.docs || [];
-          setServices(rawServices);
-        }
-
-        if (categoriesRes.data.data) {
-          setCategories(categoriesRes.data.data.categories || []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch public home data:", err);
-      }
-    };
-
-    fetchPublicData();
-  }, []);
-
+  const { services, categories } = useAdmin();
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [typingStep, setTypingStep] = useState(0);
   const [fadeKey, setFadeKey] = useState(0);
@@ -77,10 +49,22 @@ const HomePage = () => {
   const { addBooking } = useBookings();
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
 
   const handleBookClick = (service) => {
     setSelectedService(service);
-    setIsModalOpen(true);
+    if (window.innerWidth >= 768) {
+      // On desktop, merge details into booking flow
+      setIsMobileDetailOpen(true);
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleDetailsClick = (service) => {
+    setSelectedService(service);
+    // Open MobileServiceDetail even on desktop as a quick-view modal
+    setIsMobileDetailOpen(true);
   };
 
   const handleConfirmBooking = (bookingData) => {
@@ -134,53 +118,6 @@ const HomePage = () => {
       delay: 1.5 // Start after entrance
     });
 
-    // Scroll Animation (Scene) for Frame Switching
-    // We scroll scrub the body to change frames
-    /* 
-    const scrollTl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "body", // Scroll whole page
-        start: "top top",
-        end: "1000px top", // Increased distance for slower, smoother feel
-        scrub: 1 // Smoother catching up
-      }
-    });
-
-    // Logic:
-    // 0% - 20%: Frame 0 (Initial)
-    // 20% - 40%: Frame 1 (Look up)
-    // 40% - 60%: Frame 2 (Ready)
-    // 60% - 100%: Frame 3 (Fly) + Movement
-
-    // Slight drift right as he prepares (Frames 0-2)
-    scrollTl.to(".superman-container", {
-      x: 100,
-      ease: "power1.inOut",
-      duration: 0.6
-    }, 0);
-
-    // FRAME 1 - Look Check
-    scrollTl.to(".frame-0", { opacity: 0, duration: 0.05 }, 0.2)
-      .to(".frame-1", { opacity: 1, duration: 0.05 }, 0.2);
-
-    // FRAME 2 - Crouching / Ready
-    scrollTl.to(".frame-1", { opacity: 0, duration: 0.05 }, 0.4)
-      .to(".frame-2", { opacity: 1, duration: 0.05 }, 0.4);
-
-    // FRAME 3 (Takeoff) + Launch
-    scrollTl.to(".frame-2", { opacity: 0, duration: 0.05 }, 0.6)
-      .to(".frame-3", { opacity: 1, duration: 0.05 }, 0.6)
-      // Fly away logic - Accelerate up and right
-      .to(".superman-container", {
-        x: 600, // Move right
-        y: -1200, // Fly way up
-        scale: 0.8, // Slight perspective shrink
-        rotation: 10, // Tilt into flight
-        ease: "power4.in", // Strong acceleration curve
-        duration: 0.6
-      }, 0.6);
-    */
-
   }, { scope: containerRef });
 
 
@@ -208,6 +145,16 @@ const HomePage = () => {
     };
   }, []);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       if (!overlayRef.current) return;
@@ -229,17 +176,19 @@ const HomePage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  if (isMobile) {
+    return (
+      <AnimatePresence mode="wait">
+        <MobileHomePage key="mobile-home" />
+      </AnimatePresence>
+    );
+  }
+
   return (
     <>
-      {/* Mobile View */}
-      <div className="block md:hidden">
-        <MobileHomePage services={services} categories={categories} />
-      </div>
-
-      {/* Desktop View */}
-      <div className="hidden md:block relative min-h-screen">
+      <div className="relative min-h-screen">
         {/* Dynamic Background System */}
-        <div className="fixed inset-0 bg-slate-50 z-0" />
+        <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-0" />
         <div
           ref={overlayRef}
           className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-75 ease-linear"
@@ -272,15 +221,15 @@ const HomePage = () => {
               <div className="absolute bottom-0 left-1/2 w-64 h-64 bg-slate-600 rounded-full blur-3xl animate-blob animation-delay-4000"></div>
             </div>
 
-            {/* Superman Worker - Moved outside the text container for full-width positioning */}
-            <div className="superman-container absolute left-[2%] md:left-[5%] lg:left-[10%] top-32 md:top-48 w-80 lg:w-96 h-112 lg:h-128 z-20 hidden md:block pointer-events-none">
-              <SupermanWorker />
+            {/* Superman Technician - Moved outside the text container for full-width positioning */}
+            <div className="superman-container absolute left-[2%] md:left-[5%] lg:left-[10%] top-32 md:top-48 w-80 lg:w-96 h-[28rem] lg:h-[32rem] z-20 hidden md:block pointer-events-none">
+              <SupermanTechnician />
             </div>
 
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
               <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter leading-[1.1]">
-                <span className="bg-linear-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent drop-shadow-sm">
+                <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent drop-shadow-sm">
                   Home Services,
                 </span> <br className="hidden md:block" />
                 <span className="relative inline-block mt-2">
@@ -314,7 +263,7 @@ const HomePage = () => {
                 />
                 <br className="hidden md:block" />
                 {typingStep >= 1 && (
-                  <span className="font-bold text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-blue-400 drop-shadow-sm">
+                  <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 drop-shadow-sm">
                     <TextType
                       text="Quick, reliable, and affordable"
                       typingSpeed={10}
@@ -384,18 +333,18 @@ const HomePage = () => {
 
           {/* How It Works Teaser */}
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-16 relative z-20 animate-item">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-10 grid grid-cols-1 md:grid-cols-3 gap-10">
               {[
                 { icon: Map, title: "1. Choose Service", desc: "Select from 50+ services" },
                 { icon: Calendar, title: "2. Book Instantly", desc: "Pick a time that works" },
                 { icon: CheckCircle, title: "3. Technician Arrives", desc: "Track pro in real-time" }
               ].map((step, idx) => (
                 <div key={idx} className="flex flex-col items-center text-center group">
-                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-slate-900 transition-colors duration-300 border border-slate-100">
-                    <step.icon className="w-7 h-7 text-slate-600 group-hover:text-white transition-colors duration-300" />
+                  <div className="w-14 h-14 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-slate-900 dark:group-hover:bg-rose-600 transition-colors duration-300 border border-slate-100 dark:border-slate-700">
+                    <step.icon className="w-7 h-7 text-slate-600 dark:text-slate-400 group-hover:text-white transition-colors duration-300" />
                   </div>
-                  <h3 className="font-bold text-slate-900 text-lg mb-2">{step.title}</h3>
-                  <p className="text-slate-500 text-sm leading-relaxed">{step.desc}</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-lg mb-2">{step.title}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">{step.desc}</p>
                 </div>
               ))}
             </div>
@@ -403,18 +352,18 @@ const HomePage = () => {
 
           {/* Categories Section - ScrollStack */}
           <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full scroll-mt-24">
-            <ServiceStack categories={categories} />
+            <ServiceStack />
           </section>
 
           {/* Popular Services Section */}
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full animate-item">
             <div className="flex justify-between items-end mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-slate-900 mb-3">Most Popular Services</h2>
-                <p className="text-slate-500 text-lg">Booked by thousands of customers</p>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">Most Popular Services</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-lg">Booked by thousands of customers</p>
               </div>
               <Link to="/services">
-                <Button variant="ghost" className="hidden sm:flex text-slate-600 hover:text-slate-900" size="sm">
+                <Button variant="ghost" className="hidden sm:flex text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" size="sm">
                   View All <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </Link>
@@ -422,14 +371,21 @@ const HomePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {services.slice(0, 3).map((service) => (
-                <ServiceCard key={service.id} service={service} onBook={handleBookClick} />
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  onBook={handleBookClick}
+                  onDetails={handleDetailsClick}
+                />
               ))}
             </div>
           </section>
 
+
+
           {/* Promotional Banner */}
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full animate-item">
-            <div className="bg-slate-900 rounded-3xl p-10 md:p-14 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left">
+            <div className="bg-slate-900 dark:bg-slate-800 rounded-3xl p-10 md:p-14 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left shadow-2xl">
               <div className="relative z-10 max-w-lg">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Broken Appliance? <br />We Fix It Fast.</h2>
                 <p className="text-slate-400 mb-8 text-lg font-light leading-relaxed">Expert technicians for AC, Plumbing, Electrical & more. <br />Get <span className="font-semibold text-white">20% off</span> your first service.</p>
@@ -451,7 +407,7 @@ const HomePage = () => {
                   <img
                     src={promoImg}
                     alt="Professional Scheduler"
-                    className="w-full h-full object-cover grayscale-20 contrast-125"
+                    className="w-full h-full object-cover grayscale-[20%] contrast-125"
                   />
                   <div className="absolute inset-0 bg-linear-to-t from-slate-900/80 to-transparent"></div>
                   <div className="absolute bottom-5 left-5 text-white font-medium flex items-center gap-2.5">
@@ -473,6 +429,15 @@ const HomePage = () => {
           service={selectedService}
           onConfirm={handleConfirmBooking}
         />
+
+        <AnimatePresence>
+          {isMobileDetailOpen && selectedService && (
+            <MobileServiceDetail
+              serviceId={selectedService.id}
+              onClose={() => setIsMobileDetailOpen(false)}
+            />
+          )}
+        </AnimatePresence>
       </div >
     </>
   );

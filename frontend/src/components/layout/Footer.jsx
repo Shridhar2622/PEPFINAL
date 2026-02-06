@@ -10,18 +10,18 @@ const Footer = () => {
                     {/* Brand */}
                     <div>
                         <div className="flex items-center gap-2 mb-6">
-                            <div className="w-8 h-8 md:bg-blue-600 bg-rose-600 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 bg-rose-600 dark:bg-blue-600 rounded-lg flex items-center justify-center">
                                 <Wrench className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-bold md:text-white text-slate-900 dark:text-white">
+                            <span className="text-xl font-bold text-slate-900 dark:text-white">
                                 Reservice
                             </span>
                         </div>
-                        <p className="md:text-slate-400 text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
+                        <p className="text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
                             Professional home repair and transport services at your doorstep. Fast, reliable, and guaranteed quality.
                         </p>
                         <div className="flex gap-4">
-                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full md:bg-slate-800 bg-rose-50 dark:bg-slate-800 text-rose-600 dark:text-slate-400 md:text-slate-400 flex items-center justify-center md:hover:bg-blue-600 hover:bg-rose-600 hover:text-white transition-all">
+                            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-rose-50 dark:bg-slate-800 text-rose-600 dark:text-slate-400 flex items-center justify-center hover:bg-rose-600 hover:text-white dark:hover:bg-blue-600 transition-all">
                                 <Facebook className="w-5 h-5" />
                             </a>
                             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full md:bg-slate-800 bg-rose-50 dark:bg-slate-800 text-rose-600 dark:text-slate-400 md:text-slate-400 flex items-center justify-center md:hover:bg-blue-600 hover:bg-rose-600 hover:text-white transition-all">
@@ -77,7 +77,7 @@ const Footer = () => {
                     </div>
                 </div>
 
-                <div className="border-t md:border-slate-800 border-rose-100 dark:border-slate-800 pt-8 text-center md:text-slate-500 text-slate-400 text-sm">
+                <div className="border-t md:border-slate-800 border-rose-100 dark:border-slate-800 pt-8 text-center md:text-slate-500 text-slate-400 dark:text-slate-500 text-sm">
                     <p>© {new Date().getFullYear()} Reservice. All rights reserved.</p>
                 </div>
             </div>

@@ -33,6 +33,7 @@ export const BookingProvider = ({ children }) => {
         // Map status (backend UPPERCASE to Title Case)
         const statusMap = {
             'PENDING': 'Pending',
+            'ASSIGNED': 'Assigned',
             'ACCEPTED': 'Assigned',
             'IN_PROGRESS': 'Assigned',
             'COMPLETED': 'Completed',
@@ -59,6 +60,7 @@ export const BookingProvider = ({ children }) => {
                 id: doc.technician._id
             } : null,
             image: doc.service?.headerImage || doc.service?.image || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800', // More generic service fallback
+            securityPin: doc.securityPin,
             review: doc.review ? {
                 id: doc.review._id || doc.review.id,
                 rating: doc.review.rating,

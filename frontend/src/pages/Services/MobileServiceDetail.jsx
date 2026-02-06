@@ -124,9 +124,12 @@ const MobileServiceDetail = ({ service, onClose }) => {
                                 <span className="text-sm font-black">{service.rating}</span>
                             </div>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
-                            {service.description}
-                        </p>
+                        <div className="space-y-1.5 mb-2">
+                            <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">About this service</p>
+                            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed transition-colors">
+                                {service.description || "High-quality professional service tailored to your specific needs. Our verified experts ensure the best results with a 30-day warranty."}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="space-y-4">

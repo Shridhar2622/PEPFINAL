@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Privacy Policy - Reservice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="shortcut icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-title" content="Bettiah Service" />
+  <style>
+    :root {
+      --primary: #1d3557;
+      --accent: #e76f51;
+      --bg: #fdfcfb;
+      --text-dark: #2c3e50;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      text-align: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      color: var(--primary);
+      letter-spacing: 1px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .sidebar-toggle {
+      display: none;
+      background: var(--accent);
+      color: white;
+      padding: 10px 14px;
+      font-size: 20px;
+      cursor: pointer;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 1001;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+    }
+    .sidebar {
+      width: 240px;
+      background: #ffffff;
+      border-right: 1.5px solid #e0e6ed;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .sidebar-header {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    .sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 12px 16px;
+      color: var(--text-dark);
+      border-radius: 10px;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+
+    .sidebar a:hover,
+    .sidebar a.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .main {
+      flex: 1;
+      padding: 40px 20px;
+      max-width: 900px;
+      margin: auto;
+      transition: opacity 0.5s ease;
+      position: relative;
+    }
+
+    h2 {
+      font-size: 24px;
+      color: var(--primary);
+      margin-bottom: 16px;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    p, li {
+      margin-bottom: 12px;
+      line-height: 1.7;
+    }
+
+    ul {
+      padding-left: 18px;
+      margin-bottom: 20px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+
+    @media (max-width: 768px) {
+      .main {
+        padding: 30px 16px;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        transform: translateX(-100%);
+        z-index: 1000;
+        background: #ffffff;
+        padding-top: 80px;
+      }
+
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      .sidebar-toggle {
+        display: block;
+      }
+
+      header {
+        padding-left: 60px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar Toggle Button -->
+<div class="sidebar-toggle" id="sidebarToggle">
+  <i class="fas fa-bars"></i>
+</div>
+
+<header>Technician Dashboard</header>
+
+<div class="container">
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <i class="fas fa-toolbox"></i>
+      <span>Technician</span>
+    </div>
+    <a href="../dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
+    <a href="../assigned-orders.php"><i class="fas fa-list-check"></i> Assigned Orders</a>
+    <a href="../complete-order.php"><i class="fas fa-check-circle"></i> Mark as Completed</a>
+    <a href="../upi-generator.php"><i class="fas fa-qrcode"></i> UPI Generator</a>
+    <a href="../settings.php"><i class="fas fa-user-cog"></i> Settings</a>
+    <a href="index.html" class="active"><i class="fas fa-file-contract"></i> Privacy Policy</a>
+    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <h2>Privacy Policy</h2>
+    <p><strong>Effective Date:</strong> June 5, 2025</p>
+
+    <p>Welcome to <strong>Reservice Technician</strong>. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy or our practices regarding your personal information, please contact us at <a href="mailto:contact@technde.in">contact@technde.in</a>.</p>
+
+    <h2>Information We Collect</h2>
+    <ul>
+      <li>Name</li>
+      <li>Email address</li>
+      <li>Phone number</li>
+      <li>Address</li>
+      <li>Device Information</li>
+    </ul>
+
+    <h2>How We Use Your Information</h2>
+    <ul>
+      <li>To provide and manage our repair service</li>
+      <li>To communicate with you</li>
+      <li>To improve user experience</li>
+      <li>To send updates and service notifications</li>
+    </ul>
+
+    <h2>Sharing Your Information</h2>
+    <p>We do not sell, rent, or share your personal information with third parties except when required by law or necessary for providing the service (e.g., sharing address with technicians).</p>
+
+    <h2>Security of Your Information</h2>
+    <p>We take appropriate technical and organizational measures to protect your personal data. However, no method of transmission over the Internet is 100% secure.</p>
+
+    <h2>Third-Party Services</h2>
+    <p>Our app may contain links to third-party websites or services that are not owned or controlled by Reservice. We are not responsible for their privacy practices.</p>
+
+    <h2>Children's Privacy</h2>
+    <p>We do not knowingly collect data from children under the age of 13. If we become aware of such data, we will delete it promptly.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update our Privacy Policy from time to time. We encourage users to review this page regularly for any changes.</p>
+
+    <h2>Contact Us</h2>
+    <p><strong>Email:</strong> <a href="mailto:contact@technde.in">contact@technde.in</a></p>
+
+    <h2>Legal Advisor</h2>
+    <ul>
+      <li><strong>Name:</strong> Advocate Yashawant Kumar Dubey</li>
+      <li><strong>Court:</strong> Civil Court Bettiah</li>
+      <li><strong>Phone:</strong> <a href="tel:+917763071870">+917763071870</a></li>
+    </ul>
+
+  </div>
+</div>
+
+<script>
+  function closeModal() {
+    document.getElementById('installModal').style.display = 'none';
+  }
+
+  // Show the modal on page load
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('installModal').style.display = 'flex';
+  });
+</script>
+
+<script>
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
+  });
+</script>
+
+</body>
+</html>
