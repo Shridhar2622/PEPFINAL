@@ -16,6 +16,11 @@ const bookingSchema = new mongoose.Schema({
         ref: 'Category',
         required: [true, 'Booking must be for a category']
     },
+    service: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+        required: [true, 'Booking must be for a service']
+    },
     status: {
         type: String,
         enum: ['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'REJECTED'],

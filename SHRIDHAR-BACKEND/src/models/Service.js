@@ -36,6 +36,15 @@ const serviceSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    rating: {
+        type: Number,
+        default: 0,
+        set: v => Math.round(v * 10) / 10
+    },
+    reviewCount: {
+        type: Number,
+        default: 0
     }
 }, {
     timestamps: true,

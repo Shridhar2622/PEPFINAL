@@ -50,26 +50,15 @@ exports.createCategory = async (req, res, next) => {
         const newCategory = await Category.create(req.body);
         console.log('[DEBUG] Category Created:', newCategory);
 
-        // Auto-create a corresponding service for this category
-        console.log('[DEBUG] Creating associated Service...');
-        const newService = await Service.create({
-            title: newCategory.name,
-            description: newCategory.description || `Professional ${newCategory.name} service`,
-            category: newCategory.name, // Using name as ID/Category identifier
-            price: newCategory.price || 0,
-            originalPrice: newCategory.originalPrice,
-            headerImage: newCategory.image,
-            isActive: newCategory.isActive,
-            rating: newCategory.rating || 0
-            // technician: null // Global service
-        });
-        console.log('[DEBUG] Service Created:', newService);
+        // Auto-create a corresponding service for this category - REMOVED for decoupled architecture
+        // Categories are now just containers. Services must be created separately and linked to a category.
+
+        console.log('[DEBUG] Category Created without automatic Service:', newCategory);
 
         res.status(201).json({
             status: 'success',
             data: {
-                category: newCategory,
-                service: newService
+                category: newCategory
             }
         });
     } catch (err) {

@@ -35,6 +35,11 @@ const reviewSchema = new mongoose.Schema({
     category: {
         type: String,
         required: [true, 'Review must belong to a category.']
+    },
+    service: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Service',
+        required: [true, 'Review must belong to a service.']
     }
 }, {
     toJSON: { virtuals: true },
@@ -100,18 +105,57 @@ reviewSchema.statics.calcAverageRatings = async function (technicianUserId) {
             }
         );
     }
+    // 3. Update Service-Specific Rating (New Feature)
+    // We also need to aggregate by service to update the Service document
+    if (this.service) { // Ensure current review instance has service ID or pass it
+        // Note: 'this' in static method does not have instance fields.
+        // We need the service ID. In post save, we have it.
+        // But here we rely on the match stage.
+        // Let's change the strategy: aggregation should group by service if possible,
+        // OR we run a separate aggregation for the specific service ID if provided.
+    }
+};
+
+reviewSchema.statics.calcServiceRating = async function (serviceId) {
+    const stats = await this.aggregate([
+        {
+            $match: { service: serviceId }
+        },
+        {
+            $group: {
+                _id: '$service',
+                nRating: { $sum: 1 },
+                avgRating: { $avg: '$rating' }
+            }
+        }
+    ]);
+
+    const Service = require('./Service');
+    if (stats.length > 0) {
+        await Service.findByIdAndUpdate(serviceId, {
+            rating: Math.round(stats[0].avgRating * 10) / 10,
+            reviewCount: stats[0].nRating
+        });
+    } else {
+        await Service.findByIdAndUpdate(serviceId, {
+            rating: 0,
+            reviewCount: 0
+        });
+    }
 };
 
 // findOneAnd is used for findOneAndDelete
 reviewSchema.post(/^findOneAnd/, async function (doc) {
     if (doc) {
         await doc.constructor.calcAverageRatings(doc.technician);
+        if (doc.service) await doc.constructor.calcServiceRating(doc.service);
     }
 });
 
 reviewSchema.post('save', function () {
     // this points to current review
     this.constructor.calcAverageRatings(this.technician);
+    if (this.service) this.constructor.calcServiceRating(this.service);
 });
 
 const Review = mongoose.model('Review', reviewSchema);

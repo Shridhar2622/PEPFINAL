@@ -13,11 +13,36 @@ const generateHappyPin = () => {
 
 exports.createBooking = async (req, res, next) => {
     try {
-        const { categoryId, scheduledAt, notes } = req.body;
+        const { categoryId, serviceId, scheduledAt, notes } = req.body;
         const Category = require('../models/Category');
 
-        // 1. Check if category exists AND is active
-        const category = await Category.findById(categoryId);
+        let finalCategoryId = categoryId;
+        let finalServiceId = serviceId;
+
+        // 1. Resolve Service and Category
+        if (serviceId) {
+            const serviceDoc = await Service.findById(serviceId);
+            if (!serviceDoc) return next(new AppError('Service not found', 404));
+
+            const categoryDoc = await Category.findOne({ name: serviceDoc.category });
+            if (categoryDoc) finalCategoryId = categoryDoc._id;
+            finalServiceId = serviceId;
+        } else if (categoryId) {
+            // Fallback: Check if categoryId is actually a service ID
+            const potentialService = await Service.findById(categoryId);
+            if (potentialService) {
+                finalServiceId = categoryId;
+                const categoryDoc = await Category.findOne({ name: potentialService.category });
+                if (categoryDoc) finalCategoryId = categoryDoc._id;
+            }
+        }
+
+        if (!finalCategoryId) {
+            return next(new AppError('A valid category or service must be provided', 400));
+        }
+
+        // 2. Check if category exists AND is active
+        const category = await Category.findById(finalCategoryId);
         if (!category || !category.isActive) {
             return next(new AppError('Category not found or not active', 404));
         }
@@ -42,8 +67,9 @@ exports.createBooking = async (req, res, next) => {
 
         const bookingData = {
             customer: req.user.id,
-            category: categoryId,
-            price: category.price || 0,
+            category: finalCategoryId,
+            service: finalServiceId,
+            price: req.body.price || category.price || 0,
             scheduledAt,
             notes,
             referenceImage: req.file ? req.file.path : undefined, // Cloudinary URL

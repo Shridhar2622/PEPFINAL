@@ -2,10 +2,8 @@ const Joi = require('joi');
 
 const createBooking = {
     body: Joi.object().keys({
-        categoryId: Joi.string().required().messages({
-            'string.empty': 'Category ID is required',
-            'any.required': 'Category ID is required'
-        }),
+        categoryId: Joi.string().allow('').optional(),
+        serviceId: Joi.string().allow('').optional(), // Allow serviceId
         scheduledAt: Joi.date().greater('now').required().messages({
             'date.base': 'Scheduled date must be a valid date',
             'date.greater': 'Scheduled date must be in the future',
@@ -15,7 +13,8 @@ const createBooking = {
         coordinates: Joi.array().items(Joi.number()).length(2).optional(),
         address: Joi.string().allow('').optional(),
         pickupLocation: Joi.string().allow('').optional(),
-        dropLocation: Joi.string().allow('').optional()
+        dropLocation: Joi.string().allow('').optional(),
+        price: Joi.number().optional() // Allow price to be passed
     })
 };
 

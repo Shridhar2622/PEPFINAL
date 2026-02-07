@@ -20,12 +20,14 @@ exports.createService = async (req, res, next) => {
             technician: req.user.id
         });
 
-        // 2. Add service to Technician Profile
-        const TechnicianProfile = require('../models/TechnicianProfile');
-        await TechnicianProfile.findOneAndUpdate(
-            { user: req.user.id },
-            { $push: { services: newService._id } }
-        );
+        // 2. Add service to Technician Profile (Only for Technicians)
+        if (req.user.role === 'TECHNICIAN') {
+            const TechnicianProfile = require('../models/TechnicianProfile');
+            await TechnicianProfile.findOneAndUpdate(
+                { user: req.user.id },
+                { $push: { services: newService._id } }
+            );
+        }
 
         res.status(201).json({
             status: 'success',
@@ -56,7 +58,11 @@ exports.getAllServices = async (req, res, next) => {
 
         // Category feature (Case Insensitive)
         if (req.query.category && req.query.category !== 'All') {
-            queryObj.category = { $regex: `^${req.query.category}$`, $options: 'i' };
+            const cat = req.query.category.trim();
+            // Use strict match but allow case insensitivity. 
+            // If user wants fuzzy, remove ^ and $. For now, strict (trimmed) is best for specific categories.
+            // Actually, to fix "not showing", let's remove strict anchors to handle subtle differences like "Plumbing " vs "Plumbing"
+            queryObj.category = { $regex: cat, $options: 'i' };
         } else if (req.query.category === 'All') {
             delete queryObj.category;
         }
@@ -71,26 +77,31 @@ exports.getAllServices = async (req, res, next) => {
             if (Object.keys(queryObj.price).length === 0) delete queryObj.price;
         }
 
-        // Visibility Guard: ONLY show services from ACTIVE technicians who are NOT REJECTED
+        // Visibility Guard: Show services from ACTIVE technicians/admins or Global services
         const User = require('../models/User');
         const TechnicianProfile = require('../models/TechnicianProfile');
 
-        // 1. Get all active technician user IDs
-        const activeTechUsers = await User.find({ role: 'TECHNICIAN', isActive: true }).select('_id');
-        const activeTechUserIds = activeTechUsers.map(t => t._id);
+        // 1. Get all active potential service providers (TECHNICIAN or ADMIN)
+        const activeProviders = await User.find({
+            role: { $in: ['TECHNICIAN', 'ADMIN'] },
+            isActive: true
+        }).select('_id role');
 
-        // 2. Get all REJECTED or OFFLINE technician user IDs
+        const activeProviderIds = activeProviders.map(u => u._id);
+
+        // 2. Get REJECTED or OFFLINE technician IDs to exclude (Admins don't have TechnicianProfiles to check)
         const invalidProfiles = await TechnicianProfile.find({
-            user: { $in: activeTechUserIds },
+            user: { $in: activeProviderIds },
             $or: [
                 { 'documents.verificationStatus': 'REJECTED' },
                 { isOnline: false }
             ]
         }).select('user');
+
         const invalidUserIds = invalidProfiles.map(p => p.user.toString());
 
-        // 3. Allowed technicians = Active - (Rejected + Offline)
-        const allowedTechIds = activeTechUserIds.filter(id => !invalidUserIds.includes(id.toString()));
+        // 3. Allowed IDs = Active Providers - Invalid Technicians
+        const allowedProviderIds = activeProviderIds.filter(id => !invalidUserIds.includes(id.toString()));
 
         if (queryObj.technician) {
             const mongoose = require('mongoose');
@@ -98,16 +109,36 @@ exports.getAllServices = async (req, res, next) => {
             try {
                 if (typeof techFilterId === 'string') techFilterId = new mongoose.Types.ObjectId(techFilterId);
 
-                if (!allowedTechIds.some(id => id.toString() === techFilterId.toString())) {
+                // If filtering by specific technician, they must be allowed
+                if (!allowedProviderIds.some(id => id.toString() === techFilterId.toString())) {
                     return res.status(200).json({ status: 'success', results: 0, data: { services: [] } });
                 }
                 queryObj.technician = techFilterId;
             } catch (err) {
-                // If invalid ID, return nothing instead of crashing
                 return res.status(200).json({ status: 'success', results: 0, data: { services: [] } });
             }
         } else {
-            queryObj.technician = { $in: allowedTechIds };
+            // Allow if technician is in allowed list OR if technician field represents a global service (null/undefined check handled by query logic)
+            // Ideally global services have technician: null or undefined.
+            // We use an $or query to allow specific technicians OR global services
+            const technicianFilter = { $in: allowedProviderIds };
+
+            // If we want to strictly show only valid services:
+            // Services must either belong to an allowed provider OR have no provider (if we support global services)
+            // But usually 'technician' field is ref 'User'.
+
+            // We will filter services where technician is in allowed list OR technician is not set (Global)
+            // However, typical mongoose query for this matches active documents.
+
+            // Since we can't easily do an $or inside the main queryObj if other fields are there without complex logic,
+            // we will stick to the allowed list, but we MUST ensure Admins are in it.
+            // AND we should explicitly allow null technician if that is how global services are stored.
+
+            queryObj.$or = [
+                { technician: { $in: allowedProviderIds } },
+                { technician: { $exists: false } },
+                { technician: null }
+            ];
         }
 
         // Debug log to identify query issues
@@ -119,7 +150,7 @@ exports.getAllServices = async (req, res, next) => {
         const skip = (page - 1) * limit;
 
         let query = Service.find(queryObj)
-            .select('title category price image headerImage rating reviewCount isActive createdAt')
+            .select('title category price image headerImage rating reviewCount isActive createdAt description')
             .populate({
                 path: 'technician',
                 select: 'name email profilePhoto isActive location',
@@ -145,24 +176,8 @@ exports.getAllServices = async (req, res, next) => {
         // Inject Category-Specific Rating & Filter by minRating
         const minRating = Number(req.query.minRating) || 0;
 
-        services = services.map(doc => {
-            const service = doc.toObject();
-            if (service.technician && service.technician.technicianProfile) {
-                const profile = service.technician.technicianProfile;
-                const categoryStats = profile.categoryRatings?.find(
-                    r => r.category && service.category && r.category.toLowerCase() === service.category.toLowerCase()
-                );
-
-                if (categoryStats) {
-                    service.rating = categoryStats.avgRating;
-                    service.reviewCount = categoryStats.count;
-                } else {
-                    service.rating = 0;
-                    service.reviewCount = 0;
-                }
-            }
-            return service;
-        });
+        // Legacy category rating injection removed. Now using service-specific ratings from DB.
+        // services = services.map(...) -> Removed
 
         // Filter by minRating if applicable (since rating is dynamic)
         if (minRating > 0) {
@@ -292,12 +307,14 @@ exports.deleteService = async (req, res, next) => {
             return next(new AppError('You are not authorized to delete this service', 403));
         }
 
-        // 2. Remove service from Technician Profile
-        const TechnicianProfile = require('../models/TechnicianProfile');
-        await TechnicianProfile.findOneAndUpdate(
-            { user: req.user.id },
-            { $pull: { services: req.params.id } }
-        );
+        // 2. Remove service from Technician Profile (Only if user has a profile)
+        if (req.user.role === 'TECHNICIAN') {
+            const TechnicianProfile = require('../models/TechnicianProfile');
+            await TechnicianProfile.findOneAndUpdate(
+                { user: req.user.id },
+                { $pull: { services: req.params.id } }
+            );
+        }
 
         // 3. Delete image from Cloudinary
         const deleteFromCloudinary = require('../utils/cloudinaryDelete');

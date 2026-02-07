@@ -15,7 +15,7 @@ router.use(authMiddleware.protect);
 
 router.post(
     '/',
-    authMiddleware.restrictTo('TECHNICIAN'),
+    authMiddleware.restrictTo('TECHNICIAN', 'ADMIN'),
     require('../../middlewares/upload').single('headerImage'),
     validate(serviceValidation.createService),
     serviceController.createService
