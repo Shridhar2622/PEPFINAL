@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Wrench, Eye, EyeOff, ShieldCheck, Mail, Lock, ArrowRight, Loader } from 'lucide-react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -13,6 +13,7 @@ const TechnicianLoginPage = () => {
     const containerRef = useRef(null);
     const formRef = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useUser();
     const { theme } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +46,8 @@ const TechnicianLoginPage = () => {
             if (result.success) {
                 if (result.user?.role === 'TECHNICIAN') {
                     toast.success('Welcome back, Captain!');
-                    navigate('/technician/dashboard');
+                    const from = location.state?.from?.pathname || '/technician/dashboard';
+                    navigate(from, { replace: true });
                 } else if (result.user?.role === 'ADMIN') {
                     toast.error('Please use the Admin Portal for administrative access.');
                 } else {
@@ -124,7 +126,7 @@ const TechnicianLoginPage = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+                            className="w-full py-5 bg-blue-600 text-white rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
                         >
                             {isLoading ? <Loader className="w-5 h-5 animate-spin" /> : <>Access Dashboard <ArrowRight className="w-5 h-5" /></>}
                         </button>

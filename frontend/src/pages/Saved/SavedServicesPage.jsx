@@ -49,10 +49,13 @@ const SavedServicesPage = () => {
         }
     };
 
-    const handleConfirmBooking = (bookingData) => {
-        addBooking(bookingData);
-        setIsModalOpen(false);
-        navigate('/bookings');
+    const handleConfirmBooking = async (bookingData) => {
+        try {
+            return await addBooking(bookingData);
+        } catch (err) {
+            console.error("Booking error:", err);
+            throw err;
+        }
     };
 
     return (

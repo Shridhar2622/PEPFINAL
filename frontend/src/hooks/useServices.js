@@ -1,39 +1,57 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import client from '../api/client';
 
 // API functions
 export const fetchServices = async (params = {}) => {
-  const { data } = await client.get('/services', { params });
-  return {
-    services: data.data.services || data.data.docs || [],
-    pagination: {
-      page: data.page || 1,
-      limit: data.limit || 12,
-      total: data.total || 0,
-      totalPages: data.totalPages || 1,
-      results: data.results || 0
-    }
-  };
+  try {
+    const { data } = await client.get('/services', { params });
+    return {
+      services: data.data?.services || data.data?.docs || [],
+      pagination: {
+        page: data.page || 1,
+        limit: data.limit || 12,
+        total: data.total || 0,
+        totalPages: data.totalPages || 1,
+        results: data.results || 0
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    throw error;
+  }
 };
 
 export const fetchServiceById = async (id) => {
-  const { data } = await client.get(`/services/${id}`);
-  return data.data.service;
+  try {
+    const { data } = await client.get(`/services/${id}`);
+    return data.data?.service || data.data;
+  } catch (error) {
+    console.error('Error fetching service by ID:', error);
+    throw error;
+  }
 };
 
 export const fetchCategories = async () => {
-  const { data } = await client.get('/categories');
-  return data.data.categories || [];
+  try {
+    const { data } = await client.get('/categories');
+    return data.data?.categories || [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    throw error;
+  }
 };
 
-// React Query hooks
+// React Query hooks - NO CACHING
 export const useServices = (params = {}) => {
   return useQuery({
     queryKey: ['services', params],
     queryFn: () => fetchServices(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
-    keepPreviousData: true, // Keep previous data while fetching new page
+    staleTime: 0, // No caching
+    gcTime: 0, // No garbage collection time
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Only retry once
+    placeholderData: undefined, // No placeholder data
   });
 };
 
@@ -41,9 +59,12 @@ export const useService = (id) => {
   return useQuery({
     queryKey: ['service', id],
     queryFn: () => fetchServiceById(id),
-    enabled: !!id,
-    staleTime: 10 * 60 * 1000, // 10 minutes for individual service
-    cacheTime: 30 * 60 * 1000, // 30 minutes
+    enabled: !!id, // Only run if id exists
+    staleTime: 0, // No caching
+    gcTime: 0, // No garbage collection time
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Only retry once
   });
 };
 
@@ -51,20 +72,23 @@ export const useCategories = () => {
   return useQuery({
     queryKey: ['categories'],
     queryFn: fetchCategories,
-    staleTime: 30 * 60 * 1000, // 30 minutes - categories change rarely
-    cacheTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 0, // No caching
+    gcTime: 0, // No garbage collection time
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
+    retry: 1, // Only retry once
   });
 };
 
 // Prefetch functions
 export const usePrefetchService = () => {
   const queryClient = useQueryClient();
-  
+
   return (id) => {
     queryClient.prefetchQuery({
       queryKey: ['service', id],
       queryFn: () => fetchServiceById(id),
-      staleTime: 10 * 60 * 1000,
+      staleTime: 0, // No caching even for prefetch
     });
   };
 };
@@ -72,7 +96,7 @@ export const usePrefetchService = () => {
 // Invalidate functions for cache management
 export const useInvalidateServices = () => {
   const queryClient = useQueryClient();
-  
+
   return () => {
     queryClient.invalidateQueries({ queryKey: ['services'] });
   };
@@ -80,7 +104,7 @@ export const useInvalidateServices = () => {
 
 export const useInvalidateService = () => {
   const queryClient = useQueryClient();
-  
+
   return (id) => {
     queryClient.invalidateQueries({ queryKey: ['service', id] });
     queryClient.invalidateQueries({ queryKey: ['services'] });
@@ -90,18 +114,18 @@ export const useInvalidateService = () => {
 // Optimistic update for saving/un-saving services
 export const useOptimisticSaveService = () => {
   const queryClient = useQueryClient();
-  
+
   return (serviceId, isSaved) => {
     // Cancel any outgoing refetches
     queryClient.cancelQueries({ queryKey: ['services'] });
-    
+
     // Snapshot the previous value
     const previousServices = queryClient.getQueryData(['services']);
-    
+
     // Optimistically update to the new value
     queryClient.setQueryData(['services'], (old) => {
       if (!old) return old;
-      
+
       if (Array.isArray(old)) {
         return old.map(service => {
           if (service.id === serviceId || service._id === serviceId) {
@@ -120,10 +144,10 @@ export const useOptimisticSaveService = () => {
           })
         };
       }
-      
+
       return old;
     });
-    
+
     // Return a context object with the snapshotted value
     return { previousServices };
   };

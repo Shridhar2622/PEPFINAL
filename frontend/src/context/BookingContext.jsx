@@ -1,21 +1,20 @@
-import React, { createContext, useState, useContext } from 'react';
-
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import client from '../api/client';
+import { useUser } from './UserContext';
+import { toast } from 'react-hot-toast';
 
 const BookingContext = createContext();
 
 export const useBookings = () => useContext(BookingContext);
 
-import { useUser } from './UserContext';
-import client from '../api/client';
-import { toast } from 'react-hot-toast';
-
 export const BookingProvider = ({ children }) => {
     const { isAuthenticated } = useUser();
     const [bookings, setBookings] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     // Auto-refresh for new bookings/status updates
-    React.useEffect(() => {
+    useEffect(() => {
         let interval;
         if (isAuthenticated) {
             fetchBookings();
@@ -26,6 +25,7 @@ export const BookingProvider = ({ children }) => {
 
     // Helper to transform backend booking
     const transformBooking = (doc) => {
+        const item = doc.category || doc.service || {};
         const dateObj = new Date(doc.scheduledAt);
         const date = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const time = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -42,13 +42,13 @@ export const BookingProvider = ({ children }) => {
 
         return {
             id: doc._id || doc.id,
-            serviceId: doc.service?._id || doc.service,
-            serviceName: doc.service?.title || 'Reservice Detail',
-            category: doc.service?.category || '',
+            categoryName: doc.category?.name || doc.service?.category || 'Unknown Category',
+            serviceName: doc.service?.title || doc.category?.name || 'Unknown Service',
+            price: doc.price || item.price || 0,
             status: statusMap[doc.status] || doc.status,
             date,
             time,
-            price: doc.price || doc.service?.price,
+            image: item.image || item.headerImage || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800',
             technician: doc.technician ? {
                 name: doc.technician.name,
                 image: doc.technician.profilePhoto
@@ -59,7 +59,10 @@ export const BookingProvider = ({ children }) => {
                 phone: doc.technician.phone || '',
                 id: doc.technician._id
             } : null,
-            image: doc.service?.headerImage || doc.service?.image || 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=800', // More generic service fallback
+            customer: doc.customer,
+            location: doc.location,
+            notes: doc.notes,
+            referenceImage: doc.referenceImage,
             securityPin: doc.securityPin,
             review: doc.review ? {
                 id: doc.review._id || doc.review.id,
@@ -69,7 +72,6 @@ export const BookingProvider = ({ children }) => {
         };
     };
 
-    // Define fetchBookings as a reusable function
     const fetchBookings = async () => {
         if (!isAuthenticated) {
             setBookings([]);
@@ -80,17 +82,15 @@ export const BookingProvider = ({ children }) => {
         try {
             const res = await client.get('/bookings');
             let rawBookings = [];
-            // Check response structure for JSend or direct array
             if (res.data.data && Array.isArray(res.data.data)) {
                 rawBookings = res.data.data;
-            } else if (res.data.data && res.data.data.docs) {
-                rawBookings = res.data.data.docs;
             } else if (res.data.data && res.data.data.bookings) {
                 rawBookings = res.data.data.bookings;
+            } else if (res.data.data && res.data.data.docs) {
+                rawBookings = res.data.data.docs;
             }
 
             setBookings(rawBookings.map(transformBooking));
-
         } catch (err) {
             console.error("Failed to fetch bookings", err);
         } finally {
@@ -99,71 +99,69 @@ export const BookingProvider = ({ children }) => {
     };
 
     const addBooking = async (newBooking) => {
+        const { categoryId, serviceId, scheduledAt, date, notes, address, pickupLocation, dropLocation, coordinates, referenceImageFile } = newBooking;
+
+        // Ensure we have a valid Date object
+        const bookingDate = scheduledAt ? new Date(scheduledAt) : (date ? new Date(date) : new Date());
+
+        setIsLoading(true);
+        setError(null);
+
         try {
-            // White-list fields for the backend
-            const {
-                serviceId,
-                date,
-                time,
-                description,
-                subServiceName,
-                notes,
-                coordinates,
-                address,
-                pickupLocation,
-                dropLocation
-            } = newBooking;
+            // Determine which notes to use
+            const finalNotes = typeof notes === 'object' ? notes.userNote : (notes || '');
 
-            // Prepare notes: Combine description and subServiceName if provided
-            let finalNotes = notes || '';
-            if (description) finalNotes += (finalNotes ? '\n' : '') + `Description: ${description}`;
-            if (subServiceName) finalNotes += (finalNotes ? '\n' : '') + `Plan: ${subServiceName}`;
+            const formData = new FormData();
+            if (categoryId) formData.append('categoryId', categoryId);
+            if (serviceId) formData.append('serviceId', serviceId);
+            formData.append('scheduledAt', bookingDate.toISOString());
+            formData.append('notes', finalNotes);
 
-            let scheduledAt;
-            if (date && time) {
-                scheduledAt = new Date(`${date}T${time}`);
-            } else {
-                scheduledAt = new Date();
+            if (address) formData.append('address', address);
+            if (pickupLocation) formData.append('pickupLocation', pickupLocation);
+            if (dropLocation) formData.append('dropLocation', dropLocation);
+            if (coordinates) formData.append('coordinates', JSON.stringify(coordinates));
+
+            if (referenceImageFile) {
+                formData.append('referenceImage', referenceImageFile);
             }
 
-            // Construct sanitized payload
-            const payload = {
-                serviceId,
-                scheduledAt,
-                notes: finalNotes,
-                coordinates,
-                address: address || pickupLocation,
-                pickupLocation,
-                dropLocation
-            };
-
-            // Remove undefined or empty string fields
-            Object.keys(payload).forEach(key => {
-                if (payload[key] === undefined || payload[key] === '') {
-                    delete payload[key];
+            const res = await client.post('/bookings', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
                 }
             });
 
-            const res = await client.post('/bookings', payload);
-
-            if (res.data.status === 'success') {
+            if (res.data.status === 'success' && res.data.data) {
                 const createdBooking = res.data.data.booking || res.data.data.data;
-                setBookings(prev => [transformBooking(createdBooking), ...prev]);
+                if (createdBooking) {
+                    setBookings(prev => [transformBooking(createdBooking), ...prev]);
+                    return createdBooking;
+                } else {
+                    throw new Error("No booking data received from server");
+                }
+            } else {
+                throw new Error(res.data.message || "Booking failed");
             }
         } catch (err) {
             console.error("Backend booking failed.", err);
-            const message = err.response?.data?.message || "Booking failed. Please try again.";
+            const message = err.response?.data?.message || err.message || "Booking failed. Please try again.";
+            setError(message);
             toast.error(message);
             throw err;
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const cancelBooking = async (id) => {
         try {
             await client.patch(`/bookings/${id}/status`, { status: 'CANCELLED' });
-            setBookings(bookings.map(b => b.id === id ? { ...b, status: 'Canceled' } : b));
+            setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'Canceled' } : b));
+            toast.success('Booking cancelled');
         } catch (err) {
             console.error("Failed to cancel booking", err);
+            toast.error("Failed to cancel booking");
         }
     };
 
@@ -171,9 +169,11 @@ export const BookingProvider = ({ children }) => {
         try {
             const backendStatus = status.toUpperCase();
             await client.patch(`/bookings/${id}/status`, { status: backendStatus });
-            setBookings(bookings.map(b => b.id === id ? { ...b, status } : b));
+            // Soft update
+            fetchBookings();
         } catch (err) {
             console.error("Failed to update status", err);
+            toast.error("Failed to update status");
         }
     };
 
@@ -186,20 +186,18 @@ export const BookingProvider = ({ children }) => {
 
             if (res.data.status === 'success') {
                 toast.success('Payment processed successfully');
-                // Refresh bookings to get updated status
                 fetchBookings();
                 return res.data.data;
             }
         } catch (err) {
             console.error("Payment processing failed", err);
-            const message = err.response?.data?.message || "Payment failed. Please try again.";
-            toast.error(message);
+            toast.error(err.response?.data?.message || "Payment failed");
             throw err;
         }
     };
 
     return (
-        <BookingContext.Provider value={{ bookings, isLoading, fetchBookings, addBooking, cancelBooking, updateBookingStatus, processPayment }}>
+        <BookingContext.Provider value={{ bookings, isLoading, error, fetchBookings, addBooking, cancelBooking, updateBookingStatus, processPayment }}>
             {children}
         </BookingContext.Provider>
     );

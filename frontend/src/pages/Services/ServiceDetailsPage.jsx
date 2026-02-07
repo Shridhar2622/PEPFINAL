@@ -75,11 +75,10 @@ const ServiceDetailsPage = () => {
 
     const handleConfirmBooking = async (bookingData) => {
         try {
-            await addBooking(bookingData);
-            setIsBookingModalOpen(false);
-            navigate('/bookings');
+            return await addBooking(bookingData);
         } catch (err) {
             // Error handled by context toast
+            throw err;
         }
     };
 

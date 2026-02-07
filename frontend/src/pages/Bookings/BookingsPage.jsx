@@ -34,7 +34,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const BookingCard = ({ booking }) => {
+const BookingCard = ({ booking, cancelBooking }) => {
     return (
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group">
             <div className="flex flex-col sm:flex-row gap-5">
@@ -92,7 +92,20 @@ const BookingCard = ({ booking }) => {
                         )}
                     </div>
 
-                    <div className="mt-4 sm:mt-0 flex justify-end">
+                    <div className="mt-4 sm:mt-0 flex items-center justify-end gap-3">
+                        {['Pending', 'Assigned'].includes(booking.status) && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm('Are you sure you want to cancel this request?')) {
+                                        cancelBooking(booking.id);
+                                    }
+                                }}
+                                className="text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-700 px-3 py-1.5 rounded-lg hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                            >
+                                Cancel Request
+                            </button>
+                        )}
                         <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                             View Details <ChevronRight className="w-4 h-4 ml-1" />
                         </Button>
@@ -152,7 +165,7 @@ const SupportWidget = () => (
 
 const BookingsPage = () => {
     const [activeTab, setActiveTab] = useState('Pending'); // Pending, Assigned, Completed, History
-    const { bookings } = useBookings();
+    const { bookings, cancelBooking } = useBookings();
     const { user, isAuthenticated, isLoading } = useUser();
     const navigate = useNavigate();
     const containerRef = useRef(null);
@@ -249,7 +262,7 @@ const BookingsPage = () => {
                             <div className="space-y-4">
                                 {filteredBookings.length > 0 ? (
                                     filteredBookings.map(booking => (
-                                        <BookingCard key={booking.id} booking={booking} />
+                                        <BookingCard key={booking.id} booking={booking} cancelBooking={cancelBooking} />
                                     ))
                                 ) : (
                                     <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">

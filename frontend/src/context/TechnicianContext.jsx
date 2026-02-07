@@ -217,32 +217,67 @@ export const TechnicianProvider = ({ children }) => {
 
     const updateBookingStatus = async (bookingId, status, completionData = null) => {
         try {
+            // Optimistic Update: Update local state immediately
+            setJobs(prevJobs => prevJobs.map(job =>
+                job._id === bookingId ? { ...job, status: status } : job
+            ));
+
             let data = { status };
             let headers = {};
 
             if (completionData) {
-                if (completionData.billImage) {
-                    // Use FormData for file upload
+                // Determine if we need FormData (for generic file uploads)
+                // We check for 'partImages' array with files, or legacy 'billImage'
+                const hasFiles = (completionData.partImages && completionData.partImages.length > 0) || completionData.billImage;
+
+                if (hasFiles) {
                     const formData = new FormData();
                     formData.append('status', status);
-                    formData.append('securityPin', completionData.securityPin);
-                    formData.append('finalAmount', completionData.finalAmount);
-                    if (completionData.extraReason) formData.append('extraReason', completionData.extraReason);
-                    if (completionData.technicianNote) formData.append('technicianNote', completionData.technicianNote);
-                    formData.append('billImage', completionData.billImage);
+
+                    // Add other fields from completionData if it exists
+                    if (completionData) {
+                        Object.keys(completionData).forEach(key => {
+                            // Skip file fields and previews (handled separately or ignored)
+                            if (!['partImages', 'billImage', 'previews'].includes(key)) {
+                                formData.append(key, completionData[key]);
+                            }
+                        });
+                    }
+
+                    // Handle generic partImages (Array of Files)
+                    if (completionData.partImages && completionData.partImages.length > 0) {
+                        completionData.partImages.forEach(file => {
+                            formData.append('partImages', file);
+                        });
+                    }
+
+                    // Handle legacy billImage (Single File)
+                    if (completionData.billImage) {
+                        formData.append('billImage', completionData.billImage);
+                    }
+
                     data = formData;
-                    headers = { 'Content-Type': 'multipart/form-data' };
+                    // Force headers to be empty so axios doesn't use the default JSON content-type
+                    headers = { 'Content-Type': undefined };
                 } else {
-                    data = { ...data, ...completionData };
+                    // JSON Fallback: Exclude frontend-only fields like 'previews' and 'partImages' (if empty array)
+                    // eslint-disable-next-line no-unused-vars
+                    const { partImages, previews, billImage, ...cleanData } = completionData;
+                    data = { status, ...cleanData };
                 }
             }
 
             await client.patch(`/bookings/${bookingId}/status`, data, { headers });
             toast.success(`Booking ${status.toLowerCase().replace('_', ' ')} successfully`);
-            fetchTechnicianBookings(); // Refresh list
-            fetchTechnicianStats(); // Refresh stats (e.g. if completed)
+
+            // Refetch in background to ensure data consistency
+            fetchTechnicianBookings();
+            fetchTechnicianStats();
             return true;
         } catch (error) {
+            // Revert optimistic update on error
+            console.error("Update failed", error);
+            fetchTechnicianBookings(); // Revert to server state
             toast.error(error.response?.data?.message || "Failed to update status");
             return false;
         }

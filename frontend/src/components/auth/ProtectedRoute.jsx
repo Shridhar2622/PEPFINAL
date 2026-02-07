@@ -20,7 +20,15 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     }
 
     if (!isAuthenticated) {
-        // Redirect to login but save the current location they were trying to access
+        // Redirection logic based on the section of the app they are trying to access
+        if (location.pathname.startsWith('/admin')) {
+            return <Navigate to="/admin/login" state={{ from: location }} replace />;
+        }
+        if (location.pathname.startsWith('/technician')) {
+            return <Navigate to="/technician/login" state={{ from: location }} replace />;
+        }
+
+        // Default to user login
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 

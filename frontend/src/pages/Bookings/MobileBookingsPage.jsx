@@ -308,14 +308,21 @@ const MobileBookingsPage = () => {
 
                                         {/* Actions */}
                                         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                                            {['Pending', 'PENDING'].includes(booking.status) ? (
+                                            {['Pending', 'Assigned'].includes(booking.status) ? (
                                                 <button
-                                                    onClick={() => cancelBooking(booking.id)}
-                                                    className="py-3 text-xs font-bold text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30 rounded-2xl hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (window.confirm('Cancel this request?')) {
+                                                            cancelBooking(booking.id);
+                                                        }
+                                                    }}
+                                                    className="py-3 text-xs font-bold text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors flex items-center justify-center gap-2"
                                                 >
-                                                    Cancel Booking
+                                                    Cancel Request
                                                 </button>
-                                            ) : ['Assigned', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status) ? (
+                                            ) : null}
+
+                                            {['Assigned', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status) ? (
                                                 <button
                                                     onClick={() => updateBookingStatus(booking.id, 'Completed')}
                                                     className="py-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors flex items-center justify-center gap-2"

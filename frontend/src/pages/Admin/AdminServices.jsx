@@ -1,268 +1,294 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { Wrench, FolderPlus, PlusCircle, Search, X, Tag, Sparkles, ChevronRight, Check, Plus, Loader } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Plus, Search, Trash2, Edit2, Wrench, X, Check, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminServices = () => {
-    const {
-        services, categories, filteringTech, setFilteringTech,
-        updateSubServicePrice, toggleSubService, addCategory, addService
-    } = useAdmin();
+    const { services, categories, addService, deleteService, updateServicePrice } = useAdmin();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [isAddingCategory, setIsAddingCategory] = React.useState(false);
-    const [isAddingService, setIsAddingService] = React.useState(false);
-    const [actionLoading, setActionLoading] = React.useState({});
+    // Filter Logic
+    const filteredServices = services.filter(service => {
+        const matchesSearch = service.title.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
 
-    const [newCategory, setNewCategory] = React.useState({ name: '', description: '', image: '', icon: 'Hammer', color: 'bg-indigo-100 text-indigo-600' });
-    const [newService, setNewService] = React.useState({ title: '', category: '', price: '', image: '', description: '' });
-
-    const handleAddCategory = async (e) => {
-        e.preventDefault();
-        if (!newCategory.name) return;
-        setActionLoading(prev => ({ ...prev, addCategory: true }));
-        try {
-            await addCategory(newCategory);
-            setIsAddingCategory(false);
-            setNewCategory({ name: '', description: '', image: '', icon: 'Hammer', color: 'bg-indigo-100 text-indigo-600' });
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setActionLoading(prev => ({ ...prev, addCategory: false }));
-        }
-    };
+    const [newService, setNewService] = useState({
+        title: '',
+        category: '',
+        price: '',
+        description: '',
+        image: ''
+    });
 
     const handleAddService = async (e) => {
         e.preventDefault();
-        if (!newService.title || !newService.category) return;
-        setActionLoading(prev => ({ ...prev, addService: true }));
-        try {
-            await addService(newService);
-            setIsAddingService(false);
-            setNewService({ title: '', category: '', price: '', image: '', description: '' });
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setActionLoading(prev => ({ ...prev, addService: false }));
+        const res = await addService(newService);
+        if (res && res.success) {
+            setIsAddModalOpen(false);
+            setNewService({ title: '', category: '', price: '', description: '', image: '' });
         }
     };
 
     return (
-        <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl md:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
-                <div className="p-5 md:p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6">
-                    <div>
-                        <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white leading-tight">Service & Plan Management</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">Configure offerings and dynamic pricing</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3 w-full md:w-auto">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setIsAddingCategory(true)}
-                                className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 md:gap-2 hover:bg-indigo-100 transition-all whitespace-nowrap"
-                            >
-                                <FolderPlus className="h-4 w-4" /> Category
-                            </button>
-                            <button
-                                onClick={() => setIsAddingService(true)}
-                                className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 md:gap-2 shadow-lg shadow-indigo-500/20 active:scale-95 transition-all whitespace-nowrap"
-                            >
-                                <PlusCircle className="h-4 w-4" /> Service Card
-                            </button>
-                        </div>
-                        <div className="relative flex-1 md:flex-none">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search services..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full md:w-48 pl-9 md:pl-10 pr-4 py-2 md:py-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs md:text-sm border-none focus:ring-2 ring-indigo-500/20 dark:text-white"
-                            />
-                        </div>
-                    </div>
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white">Services</h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Manage global service offerings</p>
                 </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
+                >
+                    <Plus className="w-5 h-5" />
+                    Add Service
+                </button>
+            </div>
 
-                {filteringTech && (
-                    <div className="mx-5 md:mx-8 mb-4 md:mb-6 p-4 md:p-5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl md:rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl overflow-hidden bg-white shadow-sm ring-2 ring-amber-100 shrink-0">
-                                <img
-                                    src={filteringTech.profilePhoto || filteringTech.user?.profilePhoto || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'}
-                                    className="w-full h-full object-cover"
-                                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100' }}
-                                />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-black uppercase text-amber-500 tracking-wider">Currently Viewing</p>
-                                <h4 className="text-sm md:text-base font-black text-slate-900 dark:text-white mt-0.5">Services by {filteringTech.user?.name || 'Expert'}</h4>
-                                <p className="text-[10px] text-amber-600/80 font-bold uppercase mt-0.5">{filteringTech.user?.email}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => setFilteringTech(null)}
-                            className="w-full sm:w-auto px-6 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 dark:border-slate-800 hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
-                        >
-                            <X className="w-3.5 h-3.5" /> Clear Filter
-                        </button>
-                    </div>
-                )}
-
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-slate-50/50 dark:bg-slate-800/20">
-                                <th className="text-left p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Service</th>
-                                <th className="text-left p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Activity</th>
-                                <th className="text-right p-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Pricing (Basic / Premium / Consult)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {services
-                                .filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                                .filter(s => !filteringTech || String(s.technician) === String(filteringTech._id || filteringTech.id))
-                                .map((service) => (
-                                    <tr key={service.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                        <td className="p-6 min-w-50">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800">
-                                                    <img src={service.image} className="w-full h-full object-cover" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1581578731548-c64695cc6958?q=80&w=200&auto=format&fit=crop'} />
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-slate-900 dark:text-white text-sm">{service.title}</p>
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight">{service.category}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-6">
-                                            <div className="flex gap-1.5">
-                                                {(service.subServices || []).map(ss => (
-                                                    <button
-                                                        key={ss.id}
-                                                        onClick={() => toggleSubService(service.id, ss.id)}
-                                                        title={`Toggle ${ss.name}`}
-                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${ss.isActive
-                                                            ? 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                                                            }`}
-                                                    >
-                                                        {ss.id === 'basic' ? <Tag className="w-4 h-4" /> : (ss.id === 'premium' ? <Sparkles className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />)}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className="p-6 text-right">
-                                            <div className="flex items-center justify-end gap-3">
-                                                {(service.subServices || []).map(ss => (
-                                                    <div key={ss.id} className="relative group">
-                                                        <span className="absolute -top-3 left-0 text-[7px] font-black text-slate-400 uppercase opacity-0 group-focus-within:opacity-100 transition-opacity">{ss.name}</span>
-                                                        <input
-                                                            type="number"
-                                                            value={ss.price}
-                                                            onChange={(e) => updateSubServicePrice(service.id, ss.id, e.target.value)}
-                                                            className={`w-20 text-right bg-slate-50 dark:bg-slate-800/50 px-2 py-2 rounded-lg font-black text-xs focus:ring-2 ring-indigo-500/20 outline-none transition-all ${ss.isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400 opacity-50'}`}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
-                    </table>
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search services..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-transparent focus:border-indigo-500 outline-none transition-all font-bold text-slate-900 dark:text-white"
+                    />
                 </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
-                    {services
-                        .filter(s => s.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                        .filter(s => !filteringTech || String(s.technician) === String(filteringTech._id || filteringTech.id))
-                        .map((service) => (
-                            <div key={service.id} className="p-5 flex flex-col gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-sm shrink-0 bg-slate-100 dark:bg-slate-800">
-                                        <img src={service.image} className="w-full h-full object-cover" onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1581578731548-c64695cc6958?q=80&w=200&auto=format&fit=crop'} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="font-black text-slate-900 dark:text-white text-base leading-tight">{service.title}</p>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{service.category}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-3 gap-2">
-                                    {(service.subServices || []).map(ss => (
-                                        <div key={ss.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${ss.isActive ? 'bg-indigo-50/30 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900/30' : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'}`}>
-                                            <div className="flex justify-between items-center">
-                                                <span className={`text-[8px] font-black uppercase tracking-tighter ${ss.isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
-                                                    {ss.name.split(' ')[0]}
-                                                </span>
-                                                <button
-                                                    onClick={() => toggleSubService(service.id, ss.id)}
-                                                    className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${ss.isActive
-                                                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
-                                                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
-                                                        }`}
-                                                >
-                                                    {ss.isActive ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                                                </button>
-                                            </div>
-                                            <div className="relative">
-                                                <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">₹</span>
-                                                <input
-                                                    type="number"
-                                                    value={ss.price}
-                                                    onChange={(e) => updateSubServicePrice(service.id, ss.id, e.target.value)}
-                                                    className={`w-full text-right bg-white dark:bg-slate-950 pl-4 pr-1 py-1.5 rounded-lg font-black text-xs outline-none focus:ring-1 ring-indigo-500/20 transition-all ${ss.isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400 opacity-50'}`}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                <div className="md:w-64">
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-transparent focus:border-indigo-500 outline-none font-bold text-slate-900 dark:text-white"
+                    >
+                        <option value="all">All Categories</option>
+                        {categories.map(cat => (
+                            <option key={cat.id || cat._id} value={cat.id || cat.name.toLowerCase()}>{cat.name}</option>
                         ))}
+                    </select>
                 </div>
             </div>
 
-            {/* Modals */}
-            {isAddingCategory && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">New Category</h3>
-                            <button onClick={() => setIsAddingCategory(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X /></button>
-                        </div>
-                        <form className="p-8 space-y-4" onSubmit={handleAddCategory}>
-                            <input required type="text" value={newCategory.name} onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold" placeholder="Category Name" />
-                            <textarea required value={newCategory.description} onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold" placeholder="Description" rows={2} />
-                            <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest">{actionLoading.addCategory ? <Loader className="animate-spin mx-auto" /> : 'Create Category'}</button>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+            {/* Services Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <AnimatePresence mode="popLayout">
+                    {filteredServices.map((service) => (
+                        <motion.div
+                            key={service.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            layout
+                            className="bg-white dark:bg-slate-900 rounded-2xl md:rounded-4xl overflow-hidden border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:shadow-indigo-500/10 transition-all group"
+                        >
+                            <div className="h-48 relative overflow-hidden">
+                                <img
+                                    src={service.image}
+                                    alt={service.title}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute top-4 right-4 flex gap-2">
+                                    <button
+                                        onClick={() => deleteService(service.id)}
+                                        className="p-2 bg-white/90 backdrop-blur-sm text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                                        title="Delete Service"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="absolute bottom-4 left-4">
+                                    <span className="px-3 py-1 bg-black/50 backdrop-blur-md text-white text-xs font-bold rounded-lg uppercase tracking-wider">
+                                        {service.category}
+                                    </span>
+                                </div>
+                            </div>
 
-            {isAddingService && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden">
-                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">New Service Card</h3>
-                            <button onClick={() => setIsAddingService(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X /></button>
-                        </div>
-                        <form className="p-8 space-y-4" onSubmit={handleAddService}>
-                            <input required type="text" value={newService.title} onChange={(e) => setNewService({ ...newService, title: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold" placeholder="Service Title" />
-                            <select required value={newService.category} onChange={(e) => setNewService({ ...newService, category: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold">
-                                <option value="">Select Category</option>
-                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                            <input required type="number" value={newService.price} onChange={(e) => setNewService({ ...newService, price: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold" placeholder="Base Price (₹)" />
-                            <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest">{actionLoading.addService ? <Loader className="animate-spin mx-auto" /> : 'Create Service'}</button>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+                            <div className="p-6">
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 line-clamp-1">{service.title}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 line-clamp-2 min-h-10">
+                                    {service.description}
+                                </p>
+
+                                <div className="flex items-center justify-between mt-auto">
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Price</span>
+                                        <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
+                                            <span className="font-extrabold text-xl">₹{service.price}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Edit Price */}
+                                    <button
+                                        onClick={() => {
+                                            const newPrice = prompt("Enter new price:", service.price);
+                                            if (newPrice && !isNaN(newPrice)) {
+                                                updateServicePrice(service.id, newPrice);
+                                            }
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+
+            {/* Add Service Modal */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsAddModalOpen(false)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-4xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800"
+                        >
+                            <div className="p-8">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <h2 className="text-2xl font-black text-slate-900 dark:text-white">New Service</h2>
+                                        <p className="text-slate-500 text-sm font-bold">Add a global service offering</p>
+                                    </div>
+                                    <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                                        <X className="w-6 h-6 text-slate-500" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleAddService} className="space-y-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Service Title</label>
+                                            <div className="relative">
+                                                <Wrench className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    value={newService.title}
+                                                    onChange={e => setNewService({ ...newService, title: e.target.value })}
+                                                    placeholder="e.g. Deep Cleaning"
+                                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900 dark:text-white"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category</label>
+                                                <select
+                                                    value={newService.category}
+                                                    onChange={e => setNewService({ ...newService, category: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900 dark:text-white appearance-none"
+                                                    required
+                                                >
+                                                    <option value="">Select...</option>
+                                                    {categories.map(cat => (
+                                                        <option key={cat.id} value={cat.id || cat.name.toLowerCase()}>{cat.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Price (₹)</label>
+                                                <div className="relative">
+                                                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                                    <input
+                                                        type="number"
+                                                        value={newService.price}
+                                                        onChange={e => setNewService({ ...newService, price: e.target.value })}
+                                                        placeholder="499"
+                                                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900 dark:text-white"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Description</label>
+                                            <textarea
+                                                value={newService.description}
+                                                onChange={e => setNewService({ ...newService, description: e.target.value })}
+                                                placeholder="Describe what's included..."
+                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900 dark:text-white min-h-25"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Service Image</label>
+
+                                            <div
+                                                className={`relative w-full h-40 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden ${newService.imageFile || newService.image ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-800 hover:border-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                                                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                                onDrop={(e) => {
+                                                    e.preventDefault(); e.stopPropagation();
+                                                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                                        const file = e.dataTransfer.files[0];
+                                                        setNewService({ ...newService, imageFile: file, image: URL.createObjectURL(file) });
+                                                    }
+                                                }}
+                                                onClick={() => document.getElementById('service-image-input').click()}
+                                            >
+                                                <input
+                                                    type="file"
+                                                    id="service-image-input"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={(e) => {
+                                                        if (e.target.files && e.target.files[0]) {
+                                                            const file = e.target.files[0];
+                                                            setNewService({ ...newService, imageFile: file, image: URL.createObjectURL(file) });
+                                                        }
+                                                    }}
+                                                />
+                                                {newService.image ? (
+                                                    <>
+                                                        <img src={newService.image} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                                            <p className="text-white font-bold text-xs uppercase tracking-widest">Change Image</p>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="text-center p-4">
+                                                        <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-600">
+                                                            <ImageIcon className="w-5 h-5" />
+                                                        </div>
+                                                        <p className="text-xs font-bold text-slate-900 dark:text-white">Click or Drag Image Here</p>
+                                                        <p className="text-[10px] text-slate-400 mt-1">Supports JPG, PNG (Max 5MB)</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                        Create Service
+                                    </button>
+                                </form>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -2,20 +2,50 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTechnician } from '../../context/TechnicianContext';
 import { useUser } from '../../context/UserContext'; // Import UserContext
-import { MapPin, Upload, Check, Loader } from 'lucide-react';
+import { Upload, Check, Loader, Clock, X } from 'lucide-react';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
-
-const SKILL_OPTIONS = [
-    "Plumber", "Electrician", "Carpenter", "AC Repair",
-    "Painter", "Cleaner", "Pest Control", "Appliance Repair"
-];
+import client from '../../api/client';
 
 const TechnicianOnboardingPage = () => {
-    const { createProfile } = useTechnician();
-    const { user, isAuthenticated, isLoading: isUserLoading } = useUser(); // Get user state
+    const { createProfile, technicianProfile, loading: isTechLoading, uploadDocuments } = useTechnician();
+    const { user, isAuthenticated, isLoading: isUserLoading } = useUser();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+
+    // Dynamic Skills State
+    const [skillsList, setSkillsList] = useState([]);
+    const [isSkillsLoading, setIsSkillsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await client.get('/categories');
+                if (res.data.status === 'success') {
+                    // Map categories to skill names
+                    const categories = res.data.data.categories.map(cat => cat.name);
+                    setSkillsList(categories);
+                }
+            } catch (err) {
+                console.error("Failed to fetch skills", err);
+                toast.error("Failed to load skills list. Please refresh.");
+            } finally {
+                setIsSkillsLoading(false);
+            }
+        };
+        fetchCategories();
+    }, []);
+
+    // Form State -- MOVED TO TOP to avoid Hook Errors
+    const [bio, setBio] = useState('');
+    const [selectedSkills, setSelectedSkills] = useState([]);
+    const [profilePhoto, setProfilePhoto] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
+
+    // Document State
+    const [aadharCard, setAadharCard] = useState(null);
+    const [panCard, setPanCard] = useState(null);
+    const [resume, setResume] = useState(null);
 
     // Redirect if not logged in (after loading)
     useEffect(() => {
@@ -33,52 +63,59 @@ const TechnicianOnboardingPage = () => {
         );
     }
 
-    // Form State
-    const [bio, setBio] = useState('');
-    const [selectedSkills, setSelectedSkills] = useState([]);
-    const [location, setLocation] = useState({ address: '', coordinates: [0, 0] });
-    const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, success, error
-    const [profilePhoto, setProfilePhoto] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
+    // Check for existing profile status
+    if (!isTechLoading && technicianProfile) {
+        const status = technicianProfile.documents?.verificationStatus;
 
-    // Document State
-    const [aadharCard, setAadharCard] = useState(null);
-    const [panCard, setPanCard] = useState(null);
-    const [resume, setResume] = useState(null);
+        if (status === 'PENDING') {
+            return (
+                <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl text-center">
+                        <div className="w-20 h-20 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Clock className="w-10 h-10" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-4">Verification Pending</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mb-8">
+                            Your application is currently under review by our Admin team.
+                            Please visit the admin office with your original documents for final verification.
+                        </p>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <p className="font-bold text-slate-900 dark:text-white text-sm">Status: <span className="text-yellow-600 uppercase">Pending Review</span></p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
-    const { uploadDocuments } = useTechnician();
+        if (status === 'REJECTED') {
+            return (
+                <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-xl text-center">
+                        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <X className="w-10 h-10" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-4">Application Rejected</h2>
+                        <p className="text-slate-600 dark:text-slate-400 mb-8">
+                            Unfortunately, your technician application was rejected.
+                            Please contact support for more information.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (status === 'VERIFIED') {
+            // Should ideally redirect, but just in case
+            setTimeout(() => navigate('/technician/dashboard'), 100);
+            return null;
+        }
+    }
 
     const handleSkillToggle = (skill) => {
         setSelectedSkills(prev =>
             prev.includes(skill)
                 ? prev.filter(s => s !== skill)
                 : [...prev, skill]
-        );
-    };
-
-    const handleLocationDetect = () => {
-        if (!navigator.geolocation) {
-            toast.error("Geolocation is not supported by your browser");
-            return;
-        }
-
-        setLocationStatus('loading');
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                setLocation(prev => ({
-                    ...prev,
-                    coordinates: [longitude, latitude], // Mongo uses [Long, Lat]
-                    address: `Lat: ${latitude.toFixed(4)}, Long: ${longitude.toFixed(4)}`
-                }));
-                setLocationStatus('success');
-                toast.success("Location detected!");
-            },
-            (error) => {
-                console.error(error);
-                setLocationStatus('error');
-                toast.error("Unable to retrieve location");
-            }
         );
     };
 
@@ -97,10 +134,6 @@ const TechnicianOnboardingPage = () => {
             toast.error("Please select at least one skill");
             return;
         }
-        if (location.coordinates[0] === 0 && location.coordinates[1] === 0) {
-            toast.error("Please detect your location");
-            return;
-        }
 
         setIsLoading(true);
 
@@ -110,7 +143,6 @@ const TechnicianOnboardingPage = () => {
             const profileResult = await createProfile({
                 bio: bio || "Professional Technician",
                 skills: selectedSkills,
-                location,
                 profilePhoto
             });
 
@@ -196,50 +228,23 @@ const TechnicianOnboardingPage = () => {
                     <div>
                         <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Your Skills</label>
                         <div className="flex flex-wrap gap-2">
-                            {SKILL_OPTIONS.map(skill => {
-                                const isSelected = selectedSkills.includes(skill);
-                                return (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {isSkillsLoading ? (
+                                    <div className="col-span-4 text-center py-4 text-slate-500">Loading skills...</div>
+                                ) : skillsList.map((skill) => (
                                     <button
-                                        type="button"
                                         key={skill}
+                                        type="button"
                                         onClick={() => handleSkillToggle(skill)}
-                                        className={`px-4 py-2 rounded-full text-sm font-bold transition-all border ${isSelected
-                                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/30'
-                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                                        className={`p-3 rounded-xl border font-bold text-sm transition-all ${selectedSkills.includes(skill)
+                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-indigo-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
                                             }`}
                                     >
-                                        {skill} {isSelected && <Check className="w-3 h-3 inline ml-1" />}
+                                        {skill}
                                     </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Location */}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Service Location</label>
-                        <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${locationStatus === 'success' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
-                                }`}>
-                                <MapPin className="w-5 h-5" />
+                                ))}
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-900 dark:text-white truncate">
-                                    {location.address || "Location not set"}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    {locationStatus === 'success' ? 'Ready for jobs nearby' : 'Required to find jobs'}
-                                </p>
-                            </div>
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant={locationStatus === 'success' ? 'outline' : 'primary'}
-                                onClick={handleLocationDetect}
-                                disabled={locationStatus === 'loading'}
-                            >
-                                {locationStatus === 'loading' ? <Loader className="w-4 h-4 animate-spin" /> : 'Detect'}
-                            </Button>
                         </div>
                     </div>
 
@@ -296,7 +301,7 @@ const TechnicianOnboardingPage = () => {
                         <Button
                             type="submit"
                             className="w-full py-4 text-lg shadow-xl shadow-blue-600/20"
-                            disabled={isLoading}
+                            disabled={isLoading || !bio || selectedSkills.length === 0 || !profilePhoto || !aadharCard || !panCard}
                         >
                             {isLoading ? (
                                 <div className="flex items-center justify-center gap-2">

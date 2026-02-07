@@ -8,11 +8,11 @@ const MobileBottomNav = ({ className }) => {
   const currentPath = location.pathname;
   const { setIsChatOpen, user } = useUser();
 
-  const navItems = user?.role === 'TECHNICIAN'
+const navItems = user?.role === 'TECHNICIAN'
     ? [
       { icon: Home, label: 'Dashboard', path: '/technician/dashboard' },
       { icon: Search, label: 'Search', path: '/search' },
-      { icon: User, label: 'Account', path: '/technician/dashboard' },
+      { icon: User, label: 'Account', path: '/profile' },
     ]
     : [
       { icon: Home, label: 'Home', path: '/' },

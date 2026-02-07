@@ -1,10 +1,10 @@
 import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { categories } from '../../data/mockData';
 import { useNavigate } from 'react-router-dom';
 import WorkerCharacter from './WorkerCharacter';
 import { Hammer, Zap, Refrigerator, Droplets, Truck, Home } from 'lucide-react';
+import { useCategories } from '../../hooks/useServices';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -63,8 +63,15 @@ const TypingEffect = ({ phrases }) => {
 const ServiceStack = () => {
     const containerRef = useRef(null);
     const workerRef = useRef(null);
-    const [activeCardId, setActiveCardId] = useState(categories[0].id);
+    const { data: categories = [] } = useCategories();
+    const [activeCardId, setActiveCardId] = useState(null);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (categories && categories.length > 0) {
+            setActiveCardId(categories[0].id || categories[0]._id);
+        }
+    }, [categories]);
 
     const promises = [
         "we assure you the 30 day guarantee of our services performed",
@@ -141,8 +148,8 @@ const ServiceStack = () => {
                     trigger: card,
                     start: "top center", // When card hits center
                     end: "bottom center",
-                    onEnter: () => setActiveCardId(categories[index].id),
-                    onEnterBack: () => setActiveCardId(categories[index].id),
+                    onEnter: () => setActiveCardId(categories[index]?.id || categories[index]?._id),
+                    onEnterBack: () => setActiveCardId(categories[index]?.id || categories[index]?._id),
                 });
             });
 
@@ -169,20 +176,20 @@ const ServiceStack = () => {
                 </div>
 
                 {categories.map((cat, index) => {
-                    const isActive = activeCardId === cat.id;
-                    const Icon = iconMap[cat.icon];
+                    const isActive = activeCardId === (cat.id || cat._id);
+                    const Icon = iconMap[cat.icon] || Home; // Fallback icon
 
-                    const colorName = cat.color.includes('orange') ? 'orange' :
-                        cat.color.includes('blue') ? 'blue' :
-                            cat.color.includes('cyan') ? 'cyan' :
-                                cat.color.includes('yellow') ? 'yellow' :
-                                    cat.color.includes('green') ? 'emerald' :
-                                        cat.color.includes('purple') ? 'violet' : 'slate';
+                    const colorName = cat.color?.includes('orange') ? 'orange' :
+                        cat.color?.includes('blue') ? 'blue' :
+                            cat.color?.includes('cyan') ? 'cyan' :
+                                cat.color?.includes('yellow') ? 'yellow' :
+                                    cat.color?.includes('green') ? 'emerald' :
+                                        cat.color?.includes('purple') ? 'violet' : 'slate';
 
                     return (
                         <div
-                            key={cat.id}
-                            onClick={() => navigate('/services', { state: { category: cat.id } })}
+                            key={cat.id || cat._id}
+                            onClick={() => navigate('/services', { state: { category: cat.name } })}
                             className={`service-card sticky top-60 mb-20 w-full rounded-[2.5rem] shadow-2xl transition-all duration-500 z-40 group overflow-hidden bg-white dark:bg-slate-900 ring-1 ring-slate-200/50 dark:ring-slate-800/50 hover:ring-4 hover:ring-${colorName}-100 dark:hover:ring-${colorName}-900/30 cursor-pointer`}
                         >
                             <div className="flex flex-col md:flex-row h-full">

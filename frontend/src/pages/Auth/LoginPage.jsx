@@ -140,13 +140,19 @@ const LoginPage = () => {
             const result = await login(email, password, tokenToSend);
             if (result.success) {
                 toast.success('Welcome back!');
-                // Redirect based on role
-                if (result.user?.role === 'TECHNICIAN') {
-                    navigate('/technician/dashboard');
-                } else if (result.user?.role === 'ADMIN') {
-                    navigate('/admin/dashboard');
+
+                // Redirect to original location if available, otherwise switch based on role
+                const from = location.state?.from?.pathname;
+                if (from) {
+                    navigate(from, { replace: true });
                 } else {
-                    navigate('/bookings');
+                    if (result.user?.role === 'TECHNICIAN') {
+                        navigate('/technician/dashboard');
+                    } else if (result.user?.role === 'ADMIN') {
+                        navigate('/admin/dashboard');
+                    } else {
+                        navigate('/bookings');
+                    }
                 }
             } else {
                 toast.error(result.message || 'Login failed');
@@ -159,10 +165,16 @@ const LoginPage = () => {
 
             if (result.success) {
                 toast.success('Registration successful!');
-                if (role === 'TECHNICIAN') {
-                    navigate('/technician/onboarding');
+
+                const from = location.state?.from?.pathname;
+                if (from) {
+                    navigate(from, { replace: true });
                 } else {
-                    navigate('/bookings'); // Redirect to Dashboard
+                    if (role === 'TECHNICIAN') {
+                        navigate('/technician/onboarding');
+                    } else {
+                        navigate('/bookings'); // Redirect to Dashboard
+                    }
                 }
             } else {
                 toast.error(result.message || 'Registration failed');

@@ -4,17 +4,17 @@ import { toast } from 'react-hot-toast';
 
 const UserContext = createContext();
 
-const generateReferralId = (email) => {
-    if (!email) return 'RSV-GUEST';
-    // Simple deterministic hash function
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-        const char = email.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
-    }
-    return `RSV-${Math.abs(hash).toString(16).toUpperCase()}`;
-};
+// const generateReferralId = (email) => {
+//     if (!email) return 'RSV-GUEST';
+//     // Simple deterministic hash function
+//     let hash = 0;
+//     for (let i = 0; i < email.length; i++) {
+//         const char = email.charCodeAt(i);
+//         hash = ((hash << 5) - hash) + char;
+//         hash = hash & hash; // Convert to 32bit integer
+//     }
+//     return `RSV-${Math.abs(hash).toString(16).toUpperCase()}`;
+// };
 
 export const UserProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -48,9 +48,14 @@ export const UserProvider = ({ children }) => {
             try {
                 // Using /auth/me to match 'front' logic reference
                 const { data } = await client.get('/auth/me');
-                setUser(data.data.user);
+                if (data.status === 'success' && data.data.user) {
+                    setUser(data.data.user);
+                } else {
+                    setUser(null);
+                }
             } catch (err) {
                 // Not authenticated or session expired
+                console.warn('Auth check failed:', err.response?.status);
                 setUser(null);
             } finally {
                 setIsLoading(false);
@@ -73,14 +78,16 @@ export const UserProvider = ({ children }) => {
         setError(null);
         try {
             const { data } = await client.post('/auth/login', { email, password, recaptchaToken });
-            setUser(data.data.user);
-            toast.success('Login successful!');
-            return { success: true, user: data.data.user };
+            if (data.status === 'success' && data.data.user) {
+                setUser(data.data.user);
+                toast.success('Login successful!');
+                return { success: true, user: data.data.user };
+            } else {
+                throw new Error(data.message || 'Login failed');
+            }
         } catch (err) {
-            const msg = err.response?.data?.message || 'Login failed';
+            const msg = err.response?.data?.message || err.message || 'Login failed';
             setError(msg);
-            // toast.error(msg); // Let components handle error toast if they want custom behavior, or do it here? 
-            // Front AuthContext did: toast.error(...) inside context.
             toast.error(msg);
             return { success: false, message: msg };
         } finally {
@@ -101,11 +108,15 @@ export const UserProvider = ({ children }) => {
                 role,
                 recaptchaToken // Pass token to backend
             });
-            setUser(data.data.user);
-            toast.success('Registration successful!');
-            return { success: true, user: data.data.user };
+            if (data.status === 'success' && data.data.user) {
+                setUser(data.data.user);
+                toast.success('Registration successful!');
+                return { success: true, user: data.data.user };
+            } else {
+                throw new Error(data.message || 'Registration failed');
+            }
         } catch (err) {
-            const msg = err.response?.data?.message || 'Registration failed';
+            const msg = err.response?.data?.message || err.message || 'Registration failed';
             setError(msg);
             toast.error(msg);
             return { success: false, message: msg };
@@ -132,17 +143,19 @@ export const UserProvider = ({ children }) => {
 
     // Placeholder for address/profile updates to also hit API
     // For now, keeping local state sync but adding API calls would be next step.
-    const updateProfile = async (userData) => {
+const updateProfile = async (userData) => {
         try {
             const res = await client.patch('/users/update-me', userData);
-            if (res.data.status === 'success') {
+            if (res.data.status === 'success' && res.data.data.user) {
                 setUser(res.data.data.user);
                 toast.success('Profile updated successfully!');
                 return { success: true };
+            } else {
+                throw new Error(res.data.message || 'Profile update failed');
             }
         } catch (err) {
             console.error('Update profile failed:', err);
-            const msg = err.response?.data?.message || 'Update failed';
+            const msg = err.response?.data?.message || err.message || 'Update failed';
             toast.error(msg);
             return { success: false, message: msg };
         }
@@ -209,7 +222,7 @@ export const UserProvider = ({ children }) => {
             removeAddress,
             submitFeedback,
             // Re-export specific helpers if needed
-            updateAddress
+            // updateAddress - deprecated
         }}>
             {children}
         </UserContext.Provider>

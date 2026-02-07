@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '../../context/AdminContext';
 import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,13 +10,15 @@ const AdminLoginPage = () => {
     const [error, setError] = useState('');
     const { login } = useAdmin();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         const result = await login(email, password);
         if (result === true) {
-            navigate('/admin/dashboard');
+            const from = location.state?.from?.pathname || '/admin/dashboard';
+            navigate(from, { replace: true });
         } else {
             setError(typeof result === 'string' ? result : 'Invalid administrative credentials');
         }

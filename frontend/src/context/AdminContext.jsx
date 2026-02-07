@@ -1,15 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { categories as initialCategories, bookings } from '../data/mockData';
+import { categories as initialCategories } from '../data/mockData';
+import { useUser } from './UserContext';
 import client from '../api/client';
+import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AdminContext = createContext();
 
 export const AdminProvider = ({ children }) => {
-    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => {
-        return localStorage.getItem('admin_auth') === 'true';
-    });
+    const { user, isAuthenticated, login: userLogin, logout: userLogout } = useUser();
+    const queryClient = useQueryClient();
 
-    const [isLoading, setIsLoading] = useState(true);
+    // Derive admin status directly from UserContext
+    // preventing separate "admin_auth" state sync issues.
+    const isAdminAuthenticated = isAuthenticated && user?.role === 'ADMIN';
 
     const [appSettings, setAppSettings] = useState(() => {
         const savedSettings = localStorage.getItem('app_settings');
@@ -21,18 +25,16 @@ export const AdminProvider = ({ children }) => {
         };
     });
 
-    // Categories are static for now as backend doesn't seem to have a dedicated settings/categories endpoint
-    const [categories, setCategories] = useState(initialCategories);
-
-    const [services, setServices] = useState([]);
+    const [allBookings, setAllBookings] = useState([]);
     const [technicians, setTechnicians] = useState([]);
     const [users, setUsers] = useState([]);
-    const [feedbacks, setFeedbacks] = useState([]);
-    const [reviews, setReviews] = useState([]);
-    const [allBookings, setAllBookings] = useState([]);
-    const [dashboardStats, setDashboardStats] = useState(null);
+    const [services, setServices] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [reasons, setReasons] = useState([]);
-    const [dealers, setDealers] = useState([]);
+    const [dashboardStats, setDashboardStats] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Feedbacks and Reviews are not fetched by the new fetchData, so their states are removed.
 
     // Helper to transform backend service to frontend shape
     const transformService = (service) => {
@@ -96,168 +98,71 @@ export const AdminProvider = ({ children }) => {
         };
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            // Only fetch data if authenticated as admin
-            if (!isAdminAuthenticated) {
-                setIsLoading(false);
-                return;
-            }
+    const fetchData = async () => {
+        if (!isAdminAuthenticated) {
+            setIsLoading(false);
+            return;
+        }
 
-            setIsLoading(true);
-            try {
-                // Fetch Categories
-                const categoriesRes = await client.get('/categories');
-                if (categoriesRes.data.data && categoriesRes.data.data.categories) {
-                    const fetchedCats = categoriesRes.data.data.categories;
-                    setCategories(prev => {
-                        const merged = [...fetchedCats];
-                        const fetchedIds = new Set(fetchedCats.map(c => String(c.id)));
+        setIsLoading(true);
+        console.log('[DEBUG] AdminContext: Initiating parallel data fetch...');
 
-                        initialCategories.forEach(mockC => {
-                            if (!fetchedIds.has(String(mockC.id))) {
-                                merged.push(mockC);
-                            }
-                        });
-                        return merged;
-                    });
-                }
+        const endpoints = [
+            { key: 'stats', url: '/admin/dashboard-stats', setter: setDashboardStats },
+            { key: 'bookings', url: '/admin/bookings', setter: setAllBookings, transform: (d) => d.data.bookings },
+            { key: 'technicians', url: '/admin/technicians', setter: setTechnicians, transform: (d) => d.data.technicians },
+            { key: 'users', url: '/admin/users', setter: setUsers, transform: (d) => d.data.users },
+            { key: 'services', url: '/services', setter: setServices, transform: (d) => d.data.services.map(transformService) },
+            { key: 'categories', url: '/categories', setter: setCategories, transform: (d) => d.data.categories },
+            { key: 'reasons', url: '/reasons', setter: setReasons, transform: (d) => d.data.reasons },
+            { key: 'settings', url: '/admin/settings', setter: setAppSettings, transform: (d) => d.data.settings },
+        ];
 
-                // Fetch Services
-                const servicesRes = await client.get('/services');
-                let fetchedServices = [];
-                if (servicesRes.data.data) {
-                    // Check array structure (Handle various backend response formats: direct array, docs pagination, or named key)
-                    let rawServices = [];
-                    const d = servicesRes.data.data;
+        try {
+            const results = await Promise.allSettled(
+                endpoints.map(ep => client.get(ep.url))
+            );
 
-                    if (Array.isArray(d)) {
-                        rawServices = d;
-                    } else if (d.services && Array.isArray(d.services)) {
-                        rawServices = d.services;
-                    } else if (d.docs && Array.isArray(d.docs)) {
-                        rawServices = d.docs;
+            results.forEach((result, index) => {
+                const ep = endpoints[index];
+                if (result.status === 'fulfilled') {
+                    const data = result.value.data;
+                    if (ep.transform) {
+                        ep.setter(ep.transform(data));
+                    } else {
+                        ep.setter(data.data || data);
                     }
-
-                    fetchedServices = rawServices.map(transformService);
-
-                    setServices(fetchedServices);
+                } else {
+                    console.warn(`[DEBUG] AdminContext: Failed to load ${ep.key}`, result.reason.response?.status);
                 }
-
-                // Fetch Technicians
-                const techniciansRes = await client.get('/admin/technicians');
-                if (techniciansRes.data.data) {
-                    const rawTechnicians = techniciansRes.data.data.technicians || [];
-                    setTechnicians(rawTechnicians);
-                }
-
-                // Fetch Users
-                const usersRes = await client.get('/admin/users');
-                if (usersRes.data.data) {
-                    setUsers(usersRes.data.data.users || []);
-                }
-
-                // Fetch Feedbacks
-                const feedbackRes = await client.get('/feedbacks');
-                if (feedbackRes.data.data) {
-                    setFeedbacks(feedbackRes.data.data.feedbacks || []);
-                }
-
-                // Fetch Reviews
-                const reviewsRes = await client.get('/reviews');
-                if (reviewsRes.data.data) {
-                    setReviews(reviewsRes.data.data.reviews || []);
-                }
-
-                // --- NEW FETCHES ---
-
-                // Fetch Settings
-                const settingsRes = await client.get('/admin/settings');
-                if (settingsRes.data.data && settingsRes.data.data.settings) {
-                    setAppSettings(settingsRes.data.data.settings);
-                }
-
-                // Fetch Stats
-                const statsRes = await client.get('/admin/dashboard-stats');
-                if (statsRes.data.data) {
-                    setDashboardStats(statsRes.data.data);
-                }
-
-                // Fetch All Bookings
-                const bookingsRes = await client.get('/admin/bookings');
-                if (bookingsRes.data.data) {
-                    setAllBookings(bookingsRes.data.data.bookings || []);
-                }
-
-                // Fetch Reasons
-                const reasonsRes = await client.get('/reasons');
-                if (reasonsRes.data.data) {
-                    setReasons(reasonsRes.data.data.reasons || []);
-                }
-
-                // Fetch Dealers
-                const dealersRes = await client.get('/admin/dealers');
-                if (dealersRes.data.data) {
-                    setDealers(dealersRes.data.data.dealers || []);
-                }
-            } catch (err) {
-                console.error("Failed to fetch admin data", err);
-                if (err.response && err.response.status === 403) {
-                    // Automatically logout if 403 encountered during fetch (token invalid/expired for admin routes)
-                    setIsAdminAuthenticated(false);
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [isAdminAuthenticated]);
+            });
+        } catch (error) {
+            console.error('[DEBUG] AdminContext: Critical fetch error', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        localStorage.setItem('admin_auth', isAdminAuthenticated);
+        fetchData();
     }, [isAdminAuthenticated]);
 
     useEffect(() => {
         localStorage.setItem('app_settings', JSON.stringify(appSettings));
     }, [appSettings]);
 
-    // Removed syncing services/technicians to localstorage as they are now server state.
-
+    // Unified Login Wrapper
     const login = async (email, password) => {
-        setIsLoading(true);
-        console.log(`[ADMIN-AUTH] Attempting login: ${email}`);
-        try {
-            const res = await client.post('/auth/login', { email, password });
-            console.log('[ADMIN-AUTH] Response Status:', res.status);
-            console.log('[ADMIN-AUTH] Response User Role:', res.data.data?.user?.role);
-
-            if (res.data.status === 'success' && res.data.data.user.role === 'ADMIN') {
-                setIsAdminAuthenticated(true);
-                return true;
-            } else {
-                console.error("Not an admin or login failed", res.data);
-                return "Not authorized as admin";
-            }
-        } catch (err) {
-            const msg = err.response?.data?.message || err.message;
-            console.error("Admin login failed", msg);
-            return msg;
-        } finally {
-            setIsLoading(false);
+        const res = await userLogin(email, password);
+        if (res.success && res.user.role === 'ADMIN') {
+            return true;
+        } else if (res.success) {
+            return "Not authorized as admin";
         }
+        return res.message;
     };
 
-    const logout = async () => {
-        try {
-            await client.post('/auth/logout');
-        } catch (err) {
-            console.error("Admin logout error", err);
-        } finally {
-            setIsAdminAuthenticated(false);
-            localStorage.removeItem('admin_auth');
-        }
-    };
+    const logout = userLogout;
 
     const toggleSetting = async (key) => {
         const newValue = !appSettings[key];
@@ -267,32 +172,36 @@ export const AdminProvider = ({ children }) => {
             await client.patch('/admin/settings', { [key]: newValue });
         } catch (err) {
             console.error("Failed to sync setting", err);
-            // Revert on failure
             setAppSettings(prev => ({ ...prev, [key]: !newValue }));
         }
     };
 
     const addCategory = async (categoryData) => {
         try {
-            const res = await client.post('/categories', {
-                ...categoryData,
-                // Ensure ID/Slug is generated if not handled by backend (Backend handles slug/id)
+            console.log('[DEBUG] AdminContext: Sending category data:', [...categoryData.entries()]);
+            const res = await client.post('/categories', categoryData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
+            console.log('[DEBUG] AdminContext: Add Category Response:', res.data);
             if (res.data.status === 'success') {
                 setCategories(prev => [...prev, res.data.data.category]);
+                queryClient.invalidateQueries({ queryKey: ['categories'] });
             }
         } catch (err) {
-            console.error("Failed to add category", err);
+            console.error("Failed to add category", err.response?.data || err.message);
         }
     };
 
     const updateCategory = async (id, categoryData) => {
         try {
-            const res = await client.patch(`/categories/${id}`, categoryData);
+            const res = await client.patch(`/categories/${id}`, categoryData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             if (res.data.status === 'success') {
                 setCategories(prev => prev.map(cat =>
                     cat._id === id || cat.id === id ? { ...cat, ...res.data.data.category } : cat
                 ));
+                queryClient.invalidateQueries({ queryKey: ['categories'] });
             }
         } catch (err) {
             console.error("Failed to update category", err);
@@ -302,43 +211,60 @@ export const AdminProvider = ({ children }) => {
     const deleteCategory = async (id) => {
         try {
             await client.delete(`/categories/${id}`);
+            // Filter out the deleted category by _id OR id
             setCategories(prev => prev.filter(cat => cat._id !== id && cat.id !== id));
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            toast.success("Category deleted");
         } catch (err) {
             console.error("Failed to delete category", err);
+            toast.error("Failed to delete category");
         }
     };
 
     const addService = async (serviceData) => {
         try {
-            // Flatten price if it's "basic" etc? Backend expects 'price'.
-            const payload = {
-                title: serviceData.title,
-                category: serviceData.category,
-                price: Number(serviceData.price),
-                description: serviceData.description || 'No description',
-                technician: isAdminAuthenticated ? '653a1...dummy' : null, // Admin creating service? Service must belong to a technician.
-            };
-
-            // If we are ADMIN, we need to assign a technician.
-            // Let's grab the first technician from state.
-            if (technicians.length > 0) {
-                payload.technician = technicians[0]._id || technicians[0].id;
-            } else {
-                console.error("Cannot create service without a technician available.");
+            // Validate required fields
+            if (!serviceData.title || !serviceData.category || !serviceData.price) {
+                toast.error("Title, Category, and Price are required");
                 return;
             }
 
-            const res = await client.post('/services', payload);
+            const isMultipart = !!serviceData.imageFile;
+            let payload;
+            let headers = {};
+
+            if (isMultipart) {
+                payload = new FormData();
+                payload.append('title', serviceData.title);
+                payload.append('category', serviceData.category);
+                payload.append('price', serviceData.price);
+                payload.append('description', serviceData.description || 'No description');
+                if (serviceData.technicianId) payload.append('technician', serviceData.technicianId);
+                payload.append('headerImage', serviceData.imageFile);
+                headers = { 'Content-Type': 'multipart/form-data' };
+            } else {
+                payload = {
+                    title: serviceData.title,
+                    category: serviceData.category,
+                    price: Number(serviceData.price),
+                    description: serviceData.description || 'No description',
+                    headerImage: serviceData.image // URL fallback
+                };
+                if (serviceData.technicianId) payload.technician = serviceData.technicianId;
+            }
+
+            const res = await client.post('/services', payload, { headers });
+
             if (res.data.status === 'success') {
                 const newService = transformService(res.data.data.service || res.data.data.data);
-                setServices(prev => {
-                    const exists = prev.find(s => String(s.id) === String(newService.id));
-                    if (exists) return prev;
-                    return [...prev, newService];
-                });
+                setServices(prev => [...prev, newService]);
+                toast.success("Service added successfully");
+                return { success: true };
             }
         } catch (err) {
             console.error("Failed to add service", err);
+            toast.error(err.response?.data?.message || "Failed to add service");
+            return { success: false, message: err.message };
         }
     };
 
@@ -347,22 +273,29 @@ export const AdminProvider = ({ children }) => {
             const res = await client.patch(`/services/${id}`, { price: Number(newPrice) });
             if (res.data.status === 'success') {
                 setServices(prev => prev.map(s => s.id === id ? { ...s, price: Number(newPrice) } : s));
+                toast.success("Price updated");
             }
         } catch (err) {
             console.error("Failed to update service price", err);
+            toast.error("Failed to update price");
+        }
+    };
+
+    const deleteService = async (id) => {
+        try {
+            await client.delete(`/services/${id}`);
+            setServices(prev => prev.filter(s => s.id !== id));
+            toast.success("Service deleted");
+        } catch (err) {
+            console.error("Failed to delete service", err);
+            toast.error("Failed to delete service");
         }
     };
 
     const updateSubServicePrice = (serviceId, subServiceId, newPrice) => {
-        // Backend doesn't support subservices. Update main price if 'basic'.
         if (subServiceId === 'basic') {
             updateServicePrice(serviceId, newPrice);
         }
-        // Else, we update local state only for "Premium/Consultation" visual, 
-        // OR we don't support it. 
-        // AdminContext UI allows editing all 3 prices.
-        // I will just update local state for non-basic to keep UI responsive, 
-        // but warn it won't persist.
         setServices(prev => prev.map(s => {
             if (s.id === serviceId) {
                 const updatedSubServices = s.subServices.map(ss =>
@@ -375,7 +308,6 @@ export const AdminProvider = ({ children }) => {
     };
 
     const toggleSubService = (serviceId, subServiceId) => {
-        // Backend no support. Local toggle.
         setServices(prev => prev.map(s =>
             s.id === serviceId ? {
                 ...s,
@@ -387,12 +319,7 @@ export const AdminProvider = ({ children }) => {
     };
 
     const updateTechnician = async (id, updatedData) => {
-        // API PATCH /users/update-me (if self) or /admin/users/:id?
-        // Assuming admin route exists or we use generic update.
-        // adminRoutes.js doesn't show update user.
-        // userController likely restricts updating others.
-        // Skipping implementation for now.
-        console.warn("updateTechnician not fully connected");
+        console.warn("updateTechnician node connected");
     };
 
     const addTechnician = async (techData) => {
@@ -408,18 +335,14 @@ export const AdminProvider = ({ children }) => {
 
             const res = await client.post('/admin/technicians', payload);
             if (res.data.status === 'success') {
-                // Add new technician to local state
-                // Note: Response structure is { user, profile }
-                // We might need to fetch all again or verify shape matches 'technicians' list
-                // Technicians list usually expects profile with populated user...
-                // Ideally we just refetch or manually construct the shape
                 const newTechnician = res.data.data.profile;
-                newTechnician.user = res.data.data.user; // Manually populate for UI
+                newTechnician.user = res.data.data.user;
                 setTechnicians(prev => [newTechnician, ...prev]);
+                toast.success("Technician added");
             }
         } catch (err) {
             console.error("Failed to add technician", err);
-            alert("Failed to add technician: " + (err.response?.data?.message || err.message));
+            toast.error(err.response?.data?.message || err.message);
         }
     };
 
@@ -429,10 +352,10 @@ export const AdminProvider = ({ children }) => {
             setTechnicians(prev => prev.map(t =>
                 t._id === id || t.id === id ? { ...t, documents: { ...t.documents, verificationStatus: 'VERIFIED' } } : t
             ));
-            toast.success("Technician approved successfully");
+            toast.success("Technician approved");
         } catch (err) {
             console.error("Failed to approve technician", err);
-            toast.error("Failed to approve: " + (err.response?.data?.message || err.message));
+            toast.error(err.response?.data?.message || err.message);
         }
     };
 
@@ -445,31 +368,38 @@ export const AdminProvider = ({ children }) => {
             toast.success("Technician rejected");
         } catch (err) {
             console.error("Failed to reject technician", err);
-            toast.error("Failed to reject: " + (err.response?.data?.message || err.message));
+            toast.error(err.response?.data?.message || err.message);
         }
     };
 
-    const toggleUserStatus = async (id, currentStatus) => {
+    const deleteTechnician = async (id) => {
         try {
-            await client.patch(`/admin/users/${id}/status`, { isActive: !currentStatus });
+            await client.delete(`/admin/technicians/${id}`);
+            setTechnicians(prev => prev.filter(t => t._id !== id && t.id !== id));
+            toast.success("Technician permanently deleted");
+        } catch (err) {
+            console.error("Failed to delete technician", err);
+            toast.error(err.response?.data?.message || err.message);
+        }
+    };
+
+    const toggleUserStatus = async (id, newStatus) => {
+        try {
+            // Fix: We now expect 'newStatus' (the desired state) directly, not 'currentStatus'.
+            // And we DO NOT flip it here. We send it as is.
+            await client.patch(`/admin/users/${id}/status`, { isActive: newStatus });
             setUsers(prev => prev.map(u =>
-                u._id === id || u.id === id ? { ...u, isActive: !currentStatus } : u
+                u._id === id || u.id === id ? { ...u, isActive: newStatus } : u
             ));
-            toast.success(`User ${!currentStatus ? 'activated' : 'blocked'} successfully`);
+            // Also update technicians list if the user is a technician
+            setTechnicians(prev => prev.map(t =>
+                t.user && (t.user._id === id || t.user.id === id) ? { ...t, user: { ...t.user, isActive: newStatus } } : t
+            ));
+
+            toast.success(newStatus ? "User enabled" : "User disabled");
         } catch (err) {
             console.error("Failed to update user status", err);
             toast.error("Failed to update status");
-        }
-    };
-
-    const deleteReview = async (id) => {
-        try {
-            await client.delete(`/admin/reviews/${id}`);
-            setReviews(prev => prev.filter(r => r._id !== id));
-            toast.success("Review deleted successfully");
-        } catch (err) {
-            console.error("Failed to delete review", err);
-            toast.error("Failed to delete review");
         }
     };
 
@@ -478,7 +408,7 @@ export const AdminProvider = ({ children }) => {
             const res = await client.patch(`/admin/bookings/${id}/cancel`);
             const updatedBooking = res.data.data.booking;
             setAllBookings(prev => prev.map(b => b._id === id ? updatedBooking : b));
-            toast.success("Booking forced to CANCELLED");
+            toast.success("Booking cancelled");
         } catch (err) {
             console.error("Failed to cancel booking", err);
             toast.error("Failed to cancel booking");
@@ -490,11 +420,10 @@ export const AdminProvider = ({ children }) => {
             const res = await client.post('/reasons', reasonData);
             if (res.data.status === 'success') {
                 setReasons(prev => [...prev, res.data.data.reason]);
-                toast.success("Reason added successfully");
+                toast.success("Reason added");
             }
         } catch (err) {
             console.error("Failed to add reason", err);
-            toast.error("Failed to add reason");
         }
     };
 
@@ -502,45 +431,9 @@ export const AdminProvider = ({ children }) => {
         try {
             await client.delete(`/reasons/${id}`);
             setReasons(prev => prev.filter(r => r._id !== id));
-            toast.success("Reason deleted successfully");
+            toast.success("Reason deleted");
         } catch (err) {
             console.error("Failed to delete reason", err);
-            toast.error("Failed to delete reason");
-        }
-    };
-
-    const addDealer = async (dealerData) => {
-        try {
-            const res = await client.post('/admin/dealers', dealerData);
-            if (res.data.status === 'success') {
-                setDealers(prev => [res.data.data.dealer, ...prev]);
-                toast.success("Dealer added successfully");
-            }
-        } catch (err) {
-            console.error("Failed to add dealer", err);
-            toast.error("Failed to add dealer");
-        }
-    };
-
-    const deleteDealer = async (id) => {
-        try {
-            await client.delete(`/admin/dealers/${id}`);
-            setDealers(prev => prev.filter(d => d._id !== id));
-            toast.success("Dealer deleted");
-        } catch (err) {
-            console.error("Failed to delete dealer", err);
-            toast.error("Failed to delete dealer");
-        }
-    };
-
-    const toggleDealerStatus = async (id) => {
-        try {
-            const res = await client.patch(`/admin/dealers/${id}/status`);
-            setDealers(prev => prev.map(d => d._id === id ? res.data.data.dealer : d));
-            toast.success("Status updated");
-        } catch (err) {
-            console.error("Failed to toggle status", err);
-            toast.error("Failed to toggle status");
         }
     };
 
@@ -549,7 +442,7 @@ export const AdminProvider = ({ children }) => {
             const res = await client.patch(`/admin/bookings/${bookingId}/assign`, { technicianId });
             const updatedBooking = res.data.data.booking;
             setAllBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
-            toast.success("Technician assigned successfully");
+            toast.success("Technician assigned");
         } catch (err) {
             console.error("Failed to assign technician", err);
             toast.error("Assignment failed");
@@ -563,8 +456,6 @@ export const AdminProvider = ({ children }) => {
             categories,
             services,
             technicians,
-            feedbacks,
-            reviews,
             isLoading,
             login,
             logout,
@@ -573,6 +464,7 @@ export const AdminProvider = ({ children }) => {
             updateCategory,
             deleteCategory,
             addService,
+            deleteService,
             updateServicePrice,
             updateSubServicePrice,
             toggleSubService,
@@ -580,6 +472,7 @@ export const AdminProvider = ({ children }) => {
             addTechnician,
             approveTechnician,
             rejectTechnician,
+            deleteTechnician,
             users,
             toggleUserStatus,
             allBookings,
@@ -587,13 +480,9 @@ export const AdminProvider = ({ children }) => {
             reasons,
             addReason,
             deleteReason,
-            dealers,
-            addDealer,
-            deleteDealer,
-            toggleDealerStatus,
             assignTechnician,
-            deleteReview,
-            cancelBooking
+            cancelBooking,
+            refreshData: fetchData
         }}>
             {children}
         </AdminContext.Provider>

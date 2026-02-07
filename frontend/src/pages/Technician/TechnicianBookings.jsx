@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTechnician } from '../../context/TechnicianContext';
 import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, Play, CheckSquare, Loader, Star, Bell, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import Button from '../../components/common/Button';
 
 const TechnicianBookings = () => {
@@ -18,6 +20,7 @@ const TechnicianBookings = () => {
         partImages: [],
         previews: []
     });
+    const [selectedReason, setSelectedReason] = useState('');
 
     const handleAction = async (bookingId, status) => {
         if (status === 'COMPLETED') {
@@ -29,40 +32,49 @@ const TechnicianBookings = () => {
         }
 
         setActionLoading(bookingId);
-        await updateBookingStatus(bookingId, status);
-        setActionLoading(null);
+        try {
+            await updateBookingStatus(bookingId, status);
+            toast.success(`Booking ${status.toLowerCase()}ed`);
+        } catch (err) {
+            toast.error("Process failed");
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     const handleCompleteSubmit = async (e) => {
         e.preventDefault();
         if (!completionForm.securityPin) return toast.error("Happy Pin is required");
+        if (completionForm.partImages.length === 0) return toast.error("At least one photo of the work is required");
 
         setActionLoading(currentBooking._id);
-        const success = await updateBookingStatus(currentBooking._id, 'COMPLETED', completionForm);
+        try {
+            const success = await updateBookingStatus(currentBooking._id, 'COMPLETED', completionForm);
 
-        if (success) {
-            setShowCompletionModal(false);
-            setCompletionForm({
-                securityPin: '',
-                finalAmount: '',
-                extraReason: '',
-                technicianNote: '',
-                billImage: null,
-                preview: null
-            });
+            if (success) {
+                toast.success("Job completed successfully!");
+                setShowCompletionModal(false);
+                setCompletionForm({
+                    securityPin: '',
+                    finalAmount: '',
+                    extraReason: '',
+                    technicianNote: '',
+                    partImages: [],
+                    previews: []
+                });
+                setSelectedReason('');
+            }
+        } finally {
+            setActionLoading(null);
         }
-        setActionLoading(null);
     };
 
-    if (loading) return <div className="flex justify-center p-10"><Loader className="animate-spin text-blue-600" /></div>;
-
-    // Filter jobs based on active tab
-    const filteredJobs = jobs.filter(booking => {
-        if (activeTab === 'requests') return ['PENDING', 'ASSIGNED'].includes(booking.status);
-        if (activeTab === 'active') return ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status);
-        if (activeTab === 'history') return ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(booking.status);
-        return false;
-    });
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-100 gap-4">
+            <Loader className="w-12 h-12 text-blue-600 animate-spin" />
+            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Syncing your schedule...</p>
+        </div>
+    );
 
     const counts = {
         requests: jobs.filter(j => ['PENDING', 'ASSIGNED'].includes(j.status)).length,
@@ -70,55 +82,63 @@ const TechnicianBookings = () => {
         history: jobs.filter(j => ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(j.status)).length
     };
 
+    const filteredJobs = jobs.filter(booking => {
+        if (activeTab === 'requests') return ['PENDING', 'ASSIGNED'].includes(booking.status);
+        if (activeTab === 'active') return ['ACCEPTED', 'IN_PROGRESS'].includes(booking.status);
+        if (activeTab === 'history') return ['COMPLETED', 'CANCELLED', 'REJECTED'].includes(booking.status);
+        return false;
+    });
+
     const getStatusBadge = (status) => {
         const styles = {
-            PENDING: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-            ASSIGNED: 'bg-purple-100 text-purple-700 border-purple-200',
-            ACCEPTED: 'bg-blue-100 text-blue-700 border-blue-200',
-            IN_PROGRESS: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-            COMPLETED: 'bg-green-100 text-green-700 border-green-200',
-            CANCELLED: 'bg-red-100 text-red-700 border-red-200',
-            REJECTED: 'bg-red-100 text-red-700 border-red-200',
+            PENDING: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
+            ASSIGNED: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border-purple-200 dark:border-purple-500/20',
+            ACCEPTED: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
+            IN_PROGRESS: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20',
+            COMPLETED: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+            CANCELLED: 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/20',
+            REJECTED: 'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-400 border-slate-200 dark:border-slate-500/20',
         };
         return (
-            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${styles[status] || 'bg-slate-100 text-slate-600'}`}>
-                {status.replace('_', ' ')}
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${styles[status] || 'bg-slate-100 text-slate-500'}`}>
+                {status}
             </span>
         );
     };
 
     const tabs = [
-        { id: 'requests', label: 'New Requests', count: counts.requests, icon: Bell, color: 'blue' },
-        { id: 'active', label: 'Ongoing Jobs', count: counts.active, icon: Play, color: 'indigo' },
-        { id: 'history', label: 'Past History', count: counts.history, icon: CheckCircle, color: 'slate' }
+        { id: 'requests', label: 'New Requests', count: counts.requests, icon: Bell },
+        { id: 'active', label: 'In Progress', count: counts.active, icon: Play },
+        { id: 'history', label: 'Completed', count: counts.history, icon: CheckCircle }
     ];
 
     return (
-        <div className="space-y-4 md:space-y-8">
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 md:gap-6 bg-white dark:bg-slate-900 md:p-8 p-3 rounded-xl md:rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-300">
+        <div className="space-y-6 md:space-y-10">
+            {/* Header Section */}
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
                 <div>
-                    <h2 className="text-lg md:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-0.5">Bookings Manager</h2>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium text-[9px] md:text-sm">Monitor and manage your service requests and active jobs.</p>
+                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
+                        Expert Workspace
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium max-w-md mt-1">
+                        High-performance dashboard to manage your service availability and active operations.
+                    </p>
                 </div>
 
-                {/* Modern & High-Visibility Tab Navigation */}
-                <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-[1.25rem] border border-slate-200 dark:border-slate-700 w-full xl:w-auto overflow-x-auto no-scrollbar">
+                <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm self-start xl:self-auto overflow-x-auto no-scrollbar max-w-full">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg md:rounded-xl text-[10px] md:text-sm font-black tracking-wide whitespace-nowrap transition-all duration-300 ${activeTab === tab.id
-                                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all duration-300 uppercase tracking-wider whitespace-nowrap ${activeTab === tab.id
+                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none'
+                                : 'text-slate-400 hover:text-indigo-600'
                                 }`}
                         >
-                            <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                            <tab.icon className="w-4 h-4" />
                             {tab.label}
                             {tab.count > 0 && (
-                                <span className={`flex items-center justify-center px-1.5 min-w-[18px] h-4.5 rounded-full text-[9px] font-black ${activeTab === tab.id
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-                                    }`}>
+                                <span className={`ml-1 flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
                                     {tab.count}
                                 </span>
                             )}
@@ -127,257 +147,275 @@ const TechnicianBookings = () => {
                 </div>
             </div>
 
-            {filteredJobs.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900/50 rounded-2xl md:rounded-[3rem] py-8 md:py-24 px-4 md:px-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800">
-                    <div className="w-12 h-12 md:w-24 md:h-24 bg-slate-50 dark:bg-slate-800 rounded-xl md:rounded-[2rem] flex items-center justify-center mx-auto mb-4 md:mb-8 shadow-sm">
-                        <Calendar className="w-6 h-6 md:w-12 md:h-12 text-slate-300" />
-                    </div>
-                    <h3 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white mb-1 md:mb-3">
-                        {activeTab === 'requests' ? 'All caught up!' : activeTab === 'active' ? 'No active work' : 'History is empty'}
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto text-xs md:text-base font-medium leading-relaxed">
-                        {activeTab === 'requests'
-                            ? "There are no new service requests at the moment. We'll alert you when a customer needs your help."
-                            : activeTab === 'active'
-                                ? "You don't have any jobs currently in progress or accepted. Check 'New Requests' to find work."
-                                : "Your past completed, cancelled, or rejected bookings will appear here for your records."}
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-6 md:gap-8 pb-16">
-                    {filteredJobs.map(booking => (
-                        <div key={booking._id} className="bg-white dark:bg-slate-900 rounded-2xl md:rounded-[2.5rem] p-4 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800/80 hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-black/40 transition-all group overflow-hidden relative">
-                            {/* Color-Coded Status Strip */}
-                            <div className={`absolute top-0 left-0 w-1.5 md:w-2 h-full ${booking.status === 'PENDING' ? 'bg-amber-400 animate-pulse' :
-                                booking.status === 'ACCEPTED' ? 'bg-blue-500' :
-                                    booking.status === 'IN_PROGRESS' ? 'bg-indigo-600' :
-                                        booking.status === 'COMPLETED' ? 'bg-green-500' : 'bg-slate-300'
-                                }`} />
-
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-                                {/* Left Section: Core Job Info */}
-                                <div className="flex-1 space-y-8">
-                                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                                        <h3 className="text-lg md:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">{booking.service?.title}</h3>
-                                        <div className="transform md:scale-110 origin-left">
-                                            {getStatusBadge(booking.status)}
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8">
-                                        <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50">
-                                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                <User className="w-4 h-4 md:w-5 md:h-5" />
+            {/* List Section */}
+            <div className="grid grid-cols-1 gap-6 md:gap-8 pb-12">
+                <AnimatePresence mode="popLayout text-left">
+                    {filteredJobs.length === 0 ? (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white dark:bg-slate-900 rounded-6xl py-24 px-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800"
+                        >
+                            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-4xl flex items-center justify-center mx-auto mb-6">
+                                <Calendar className="w-10 h-10 text-slate-300" />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase">
+                                {activeTab === 'requests' ? 'Awaiting Requests' : activeTab === 'active' ? 'Workspace Clear' : 'No History Yet'}
+                            </h3>
+                            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto font-medium">
+                                {activeTab === 'requests'
+                                    ? "We'll notify you the moment a new service request matches your expertise."
+                                    : activeTab === 'active'
+                                        ? "You don't have any jobs currently in progress. Great time to review your tools!"
+                                        : "Your completed earnings and past performance data will appear here once you finish a job."}
+                            </p>
+                        </motion.div>
+                    ) : (
+                        filteredJobs.map(booking => (
+                            <motion.div
+                                key={booking._id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800 group hover:shadow-2xl hover:shadow-indigo-500/5 transition-all overflow-hidden relative active:scale-[0.99]"
+                            >
+                                <div className="flex flex-col lg:flex-row justify-between gap-8 md:gap-12 relative z-10">
+                                    {/* Left: Metadata */}
+                                    <div className="flex-1 space-y-8">
+                                        <div className="flex flex-wrap items-center gap-4">
+                                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 shadow-inner">
+                                                <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-indigo-600" />
                                             </div>
                                             <div>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Customer Name</span>
-                                                <div className="font-extrabold text-slate-800 dark:text-slate-200 text-base">
-                                                    {booking.customer?.name}
+                                                <h3 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1.5">
+                                                    {booking.category?.name || 'Service Request'}
+                                                </h3>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 dark:border-slate-800 pr-3">#{booking._id.slice(-8)}</span>
+                                                    {getStatusBadge(booking.status)}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50">
-                                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                                <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <User className="w-3 h-3" /> Customer Info
+                                                </p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">{booking.customer?.name}</p>
+                                                <p className="text-xs text-slate-400 font-bold tracking-tighter uppercase">{booking.customer?.phone}</p>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Scheduled Date</span>
-                                                <div className="font-extrabold text-slate-800 dark:text-slate-200 text-sm md:text-base">
-                                                    {format(new Date(booking.scheduledAt), 'EEEE, MMM do')}
-                                                </div>
-                                                <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 mt-0.5">
-                                                    <Clock className="w-3 h-3" /> {format(new Date(booking.scheduledAt), 'p')}
-                                                </div>
+
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <Clock className="w-3 h-3" /> Scheduled Date
+                                                </p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                    {format(new Date(booking.scheduledAt), 'MMM do')}
+                                                </p>
+                                                <p className="text-xs text-indigo-500 font-bold uppercase tracking-widest">Awaiting Attendance</p>
+                                            </div>
+
+                                            <div className="space-y-1 md:col-span-2 lg:col-span-1">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <MapPin className="w-3 h-3" /> Precise Location
+                                                </p>
+                                                <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-60">
+                                                    {booking.location?.address || 'Standard Location'}
+                                                </p>
+                                                <button className="text-[10px] font-black text-indigo-600 uppercase hover:underline">Get Directions</button>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 md:col-span-2 lg:col-span-1">
-                                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
-                                                <MapPin className="w-4 h-4 md:w-5 md:h-5" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Service Location</span>
-                                                <div className="font-extrabold text-slate-800 dark:text-slate-200 text-sm md:text-base truncate">
-                                                    {booking.status === 'PENDING'
-                                                        ? 'Address sent upon acceptance'
-                                                        : (booking.userLocation?.address || booking.customer?.location?.address || 'Location Hidden')}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {booking.notes && (
-                                        <div className="relative pl-6 py-1">
-                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                                            <p className="text-sm italic text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                                                "{booking.notes}"
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Actions & Price */}
-                                <div className="flex flex-col md:items-end justify-between md:min-w-[200px] gap-6 md:gap-0">
-                                    <div className="text-left md:text-right">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Payout</span>
-                                        <div className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">₹{booking.price}</div>
-                                    </div>
-
-                                    {/* Action Buttons */}
-                                    <div className="w-full space-y-3">
-                                        {['PENDING', 'ASSIGNED'].includes(booking.status) && (
-                                            <div className="flex gap-3">
-                                                <Button
-                                                    className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 border-0 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
-                                                    onClick={() => handleAction(booking._id, 'REJECTED')}
-                                                    disabled={actionLoading === booking._id}
-                                                >
-                                                    Reject
-                                                </Button>
-                                                <Button
-                                                    className="flex-2 py-4 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all min-h-[56px] flex items-center justify-center"
-                                                    onClick={() => handleAction(booking._id, 'ACCEPTED')}
-                                                    disabled={actionLoading === booking._id}
-                                                >
-                                                    {actionLoading === booking._id ? 'Updating status...' : 'Accept Job'}
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {booking.status === 'ACCEPTED' && (
-                                            <Button
-                                                className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20 rounded-[1.25rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] min-h-[64px]"
-                                                onClick={() => handleAction(booking._id, 'IN_PROGRESS')}
-                                                disabled={actionLoading === booking._id}
-                                            >
-                                                {actionLoading === booking._id ? 'Updating status...' : <><Play className="w-5 h-5" /> Start Service</>}
-                                            </Button>
-                                        )}
-
-                                        {booking.status === 'IN_PROGRESS' && (
-                                            <Button
-                                                className="w-full py-5 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/20 rounded-[1.25rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] min-h-[64px]"
-                                                onClick={() => handleAction(booking._id, 'COMPLETED')}
-                                                disabled={actionLoading === booking._id}
-                                            >
-                                                {actionLoading === booking._id ? 'Updating status...' : <><CheckSquare className="w-5 h-5" /> Mark Completed</>}
-                                            </Button>
-                                        )}
-
-                                        {booking.status === 'COMPLETED' && booking.review && (
-                                            <div className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-[1.5rem] border border-amber-100 dark:border-amber-900/30">
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-500 tracking-wider">Review Recieved</span>
-                                                    <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full shadow-sm">
-                                                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                                                        <span className="text-xs font-black text-slate-800 dark:text-slate-100">{booking.review.rating}</span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium italic leading-relaxed">
-                                                    "{booking.review.review}"
+                                        {booking.notes && (
+                                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed italic">
+                                                    Note: "{booking.notes}"
                                                 </p>
                                             </div>
                                         )}
-
-                                        {['CANCELLED', 'REJECTED'].includes(booking.status) && (
-                                            <div className="text-center py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-slate-400 font-bold text-[10px] uppercase tracking-widest">
-                                                Booking {booking.status.toLowerCase()}
-                                            </div>
-                                        )}
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
 
-            {/* Completion Modal */}
-            {showCompletionModal && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4">
-                    <div className="flex min-h-full items-center justify-center">
-                        <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 md:p-10 shadow-2xl border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in duration-300 my-8">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Complete Service</h3>
-                                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Order #{currentBooking?._id?.slice(-6)}</p>
-                                </div>
-                                <button onClick={() => setShowCompletionModal(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400">
-                                    <XCircle className="w-6 h-6" />
-                                </button>
-                            </div>
+                                    {/* Right: Revenue & Actions */}
+                                    <div className="flex flex-col justify-between items-start lg:items-end gap-8 min-w-50">
+                                        <div className="text-left lg:text-right">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Service Revenue</p>
+                                            <p className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">₹{booking.finalAmount || booking.price}</p>
+                                        </div>
 
-                            <form onSubmit={handleCompleteSubmit} className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Initial Amount</label>
-                                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-black">
-                                            ₹{currentBooking?.price}
+                                        <div className="w-full space-y-3">
+                                            {['PENDING', 'ASSIGNED'].includes(booking.status) && (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => handleAction(booking._id, 'REJECTED')}
+                                                        className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction(booking._id, 'ACCEPTED')}
+                                                        className="flex-2 py-4 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                                    >
+                                                        Accept Fast
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {booking.status === 'ACCEPTED' && (
+                                                <button
+                                                    onClick={() => handleAction(booking._id, 'IN_PROGRESS')}
+                                                    className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                                >
+                                                    <Play className="w-5 h-5 fill-current" /> Start Operations
+                                                </button>
+                                            )}
+
+                                            {booking.status === 'IN_PROGRESS' && (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => handleAction(booking._id, 'CANCELLED')}
+                                                        className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                                                    >
+                                                        Cancel Job
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction(booking._id, 'COMPLETED')}
+                                                        className="flex-2 w-full py-5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-500/20 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                                    >
+                                                        <CheckSquare className="w-5 h-5" /> Mark Completed
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {booking.status === 'COMPLETED' && booking.review && (
+                                                <div className="bg-amber-50 dark:bg-amber-500/5 p-5 rounded-3xl border border-amber-100 dark:border-amber-500/10">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-[10px] font-black uppercase text-amber-600 tracking-wider">Happy Customer Feedback</span>
+                                                        <div className="flex gap-0.5">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star key={i} className={`w-3 h-3 ${i < booking.review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 dark:text-slate-400 font-bold italic">"{booking.review.review}"</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
+                            </motion.div>
+                        ))
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Modal - Modernized */}
+            <AnimatePresence>
+                {showCompletionModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md px-4 py-8"
+                    >
+                        <div className="flex min-h-full items-center justify-center">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[3rem] p-8 md:p-12 shadow-2xl border border-indigo-50 dark:border-slate-800"
+                            >
+                                <div className="flex justify-between items-start mb-10">
                                     <div>
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Final Amount</label>
+                                        <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase mb-1">Finish Order</h2>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {currentBooking?._id}</p>
+                                    </div>
+                                    <button onClick={() => setShowCompletionModal(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-all">
+                                        <XCircle className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleCompleteSubmit} className="space-y-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex justify-between items-center px-1">
+                                            Final Billed Amount <span>(Current: ₹{currentBooking?.price})</span>
+                                        </label>
+                                        <div className="relative">
+                                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-400">₹</span>
+                                            <input
+                                                type="number"
+                                                required
+                                                value={completionForm.finalAmount}
+                                                onChange={(e) => setCompletionForm(prev => ({ ...prev, finalAmount: e.target.value }))}
+                                                className="w-full pl-12 pr-6 py-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-slate-100 dark:border-slate-800 text-3xl font-black text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {Number(completionForm.finalAmount) > Number(currentBooking?.price) && (
+                                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="space-y-3">
+                                            <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest px-1">Reason for Adjustment</label>
+                                            <select
+                                                required
+                                                value={selectedReason}
+                                                onChange={(e) => {
+                                                    setSelectedReason(e.target.value);
+                                                    if (e.target.value !== 'Custom') setCompletionForm(prev => ({ ...prev, extraReason: e.target.value }));
+                                                }}
+                                                className="w-full p-5 bg-white dark:bg-slate-950 rounded-2xl border-2 border-rose-100 dark:border-rose-900/30 text-slate-900 dark:text-white font-bold outline-none appearance-none"
+                                            >
+                                                <option value="">Select Reason...</option>
+                                                <option value="Added Spare Parts">Added Spare Parts</option>
+                                                <option value="Extended Service Scope">Extended Scope</option>
+                                                <option value="Heavy Duty Requirement">Complex Environment</option>
+                                                <option value="Custom">Other (Specify Below)</option>
+                                            </select>
+                                            {selectedReason === 'Custom' && (
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    placeholder="Detail the reason..."
+                                                    className="w-full p-5 bg-slate-50 dark:bg-slate-800 rounded-2xl border-0 text-slate-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                                    value={completionForm.extraReason}
+                                                    onChange={(e) => setCompletionForm(prev => ({ ...prev, extraReason: e.target.value }))}
+                                                />
+                                            )}
+                                        </motion.div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-indigo-500 uppercase tracking-widest px-1 text-center block">Happy Pin (Verify with Customer)</label>
                                         <input
-                                            type="number"
+                                            type="text"
                                             required
-                                            value={completionForm.finalAmount}
-                                            onChange={(e) => setCompletionForm(prev => ({ ...prev, finalAmount: e.target.value }))}
-                                            className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
-                                            placeholder="Enter amount"
+                                            maxLength={6}
+                                            value={completionForm.securityPin}
+                                            onChange={(e) => setCompletionForm(prev => ({ ...prev, securityPin: e.target.value }))}
+                                            className="w-full p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-3xl border-2 border-indigo-100 dark:border-indigo-900/40 text-center text-4xl font-black tracking-[0.8em] text-indigo-600 dark:text-indigo-400 focus:border-indigo-500 outline-none"
+                                            placeholder="••••••"
                                         />
                                     </div>
-                                </div>
 
-                                {Number(completionForm.finalAmount) > Number(currentBooking?.price) && (
-                                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Reason for Extra Charges</label>
-                                        <select
-                                            required
-                                            value={completionForm.extraReason}
-                                            onChange={(e) => setCompletionForm(prev => ({ ...prev, extraReason: e.target.value }))}
-                                            className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-bold focus:border-blue-500 outline-none transition-all appearance-none"
-                                        >
-                                            <option value="">Select Reason</option>
-                                            {reasons.map(r => (
-                                                <option key={r._id} value={r._id}>{r.reason}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Happy Pin (From Customer)</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={completionForm.securityPin}
-                                        onChange={(e) => setCompletionForm(prev => ({ ...prev, securityPin: e.target.value }))}
-                                        className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-blue-100 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 font-black text-center text-2xl tracking-[0.5em] focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all"
-                                        placeholder="000000"
-                                        maxLength={6}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Technician Note</label>
-                                    <textarea
-                                        value={completionForm.technicianNote}
-                                        onChange={(e) => setCompletionForm(prev => ({ ...prev, technicianNote: e.target.value }))}
-                                        className="w-full p-4 bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white font-medium focus:border-blue-500 outline-none transition-all"
-                                        placeholder="Any notes about the service..."
-                                        rows={2}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Installation / Part Images (Required for extra charges)</label>
                                     <div className="space-y-4">
-                                        <div className="relative group">
+                                        <div
+                                            className="relative border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-10 hover:border-indigo-400 transition-all group overflow-hidden"
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const files = Array.from(e.dataTransfer.files);
+                                                if (files.length > 0) {
+                                                    const newPreviews = files.map(f => URL.createObjectURL(f));
+                                                    setCompletionForm(prev => ({
+                                                        ...prev,
+                                                        partImages: [...prev.partImages, ...files],
+                                                        previews: [...prev.previews, ...newPreviews]
+                                                    }));
+                                                }
+                                            }}
+                                        >
                                             <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
+                                                type="file" multiple accept="image/*"
+                                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                                 onChange={(e) => {
                                                     const files = Array.from(e.target.files);
                                                     if (files.length > 0) {
@@ -389,36 +427,31 @@ const TechnicianBookings = () => {
                                                         }));
                                                     }
                                                 }}
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                             />
-                                            <div className="p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center gap-3 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 transition-all">
-                                                <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                                    <ImageIcon className="w-6 h-6" />
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                    <ImageIcon className="w-8 h-8" />
                                                 </div>
                                                 <div className="text-center">
-                                                    <span className="text-xs font-black text-slate-600 dark:text-slate-300 block">Upload Job Photos</span>
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase mt-1 block tracking-wider">Spare parts or new installation proof</span>
+                                                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tighter">Upload Work Photos</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Tap or drop images here</p>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {completionForm.previews.length > 0 && (
-                                            <div className="grid grid-cols-4 gap-3">
-                                                {completionForm.previews.map((preview, idx) => (
-                                                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-100 dark:border-slate-800">
-                                                        <img src={preview} className="w-full h-full object-cover" alt={`Preview ${idx + 1}`} />
+                                            <div className="grid grid-cols-4 gap-4">
+                                                {completionForm.previews.map((src, i) => (
+                                                    <div key={i} className="aspect-square rounded-2xl overflow-hidden relative border-2 border-white dark:border-slate-800 shadow-sm transition-all hover:scale-105">
+                                                        <img src={src} className="w-full h-full object-cover" />
                                                         <button
                                                             type="button"
-                                                            onClick={() => {
-                                                                setCompletionForm(prev => {
-                                                                    const newImages = [...prev.partImages];
-                                                                    const newPreviews = [...prev.previews];
-                                                                    newImages.splice(idx, 1);
-                                                                    newPreviews.splice(idx, 1);
-                                                                    return { ...prev, partImages: newImages, previews: newPreviews };
-                                                                });
-                                                            }}
-                                                            className="absolute top-1 right-1 p-1 bg-white/90 dark:bg-slate-900/90 rounded-full text-red-500 shadow-sm"
+                                                            onClick={() => setCompletionForm(prev => {
+                                                                const ni = [...prev.partImages]; ni.splice(i, 1);
+                                                                const np = [...prev.previews]; np.splice(i, 1);
+                                                                return { ...prev, partImages: ni, previews: np };
+                                                            })}
+                                                            className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-rose-500 shadow-sm"
                                                         >
                                                             <XCircle className="w-4 h-4" />
                                                         </button>
@@ -427,20 +460,20 @@ const TechnicianBookings = () => {
                                             </div>
                                         )}
                                     </div>
-                                </div>
 
-                                <Button
-                                    type="submit"
-                                    className="w-full py-5 bg-green-600 hover:bg-green-700 text-white shadow-xl shadow-green-500/20 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all min-h-[64px]"
-                                    disabled={actionLoading === currentBooking?._id}
-                                >
-                                    {actionLoading === currentBooking?._id ? <Loader className="animate-spin w-5 h-5" /> : 'Confirm Completion'}
-                                </Button>
-                            </form>
+                                    <button
+                                        type="submit"
+                                        disabled={actionLoading}
+                                        className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-indigo-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                    >
+                                        {actionLoading ? <Loader className="w-6 h-6 animate-spin" /> : 'Finalize Service Execution'}
+                                    </button>
+                                </form>
+                            </motion.div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

@@ -15,7 +15,9 @@ client.interceptors.response.use(
         const message = error.response?.data?.message || 'Something went wrong';
         // You could trigger a toast notification here if you add a toast library
         if (error.response?.status !== 401) {
-            console.error('API Error:', message);
+            console.error('API Error:', message, error.response?.status);
+        } else {
+            console.warn('Auth error - token may have expired');
         }
         return Promise.reject(error);
     }

@@ -26,13 +26,14 @@ import AIChatBot from './components/mobile/AIChatBot';
 import AdminLayout from './layouts/AdminLayout';
 import AdminOverview from './pages/Admin/AdminOverview';
 import AdminToggles from './pages/Admin/AdminToggles';
-import AdminServices from './pages/Admin/AdminServices';
 import AdminTechnicians from './pages/Admin/AdminTechnicians';
 import AdminBookings from './pages/Admin/AdminBookings';
+import AdminServices from './pages/Admin/AdminServices';
+
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminReasons from './pages/Admin/AdminReasons';
-import AdminDealers from './pages/Admin/AdminDealers';
 import AdminFeedback from './pages/Admin/AdminFeedback';
+import AdminCategories from './pages/Admin/AdminCategories';
 import AdminLoginPage from './pages/Admin/AdminLoginPage';
 import CareersPage from './pages/Static/CareersPage';
 import ContactPage from './pages/Static/ContactPage';
@@ -41,6 +42,8 @@ import TechnicianRegisterPage from './pages/BeAPartner/TechnicianRegisterPage';
 import TechnicianOnboardingPage from './pages/BeAPartner/TechnicianOnboardingPage';
 import TechnicianDashboard from './pages/Technician/TechnicianDashboard';
 import TechnicianLoginPage from './pages/Technician/TechnicianLoginPage';
+import CategoryDebug from './pages/Debug/CategoryDebug';
+import NotFoundPage from './pages/Static/NotFoundPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
@@ -136,14 +139,17 @@ function AnimatedRoutes() {
               <Route index element={<AdminOverview />} />
               <Route path="dashboard" element={<AdminOverview />} />
               <Route path="toggles" element={<AdminToggles />} />
-              <Route path="services" element={<AdminServices />} />
               <Route path="experts" element={<AdminTechnicians />} />
               <Route path="bookings" element={<AdminBookings />} />
+              <Route path="services" element={<AdminServices />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="reasons" element={<AdminReasons />} />
-              <Route path="dealers" element={<AdminDealers />} />
               <Route path="feedback" element={<AdminFeedback />} />
+              <Route path="categories" element={<AdminCategories />} />
             </Route>
+
+            {/* 404 Route */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </motion.div>
       </AnimatePresence>

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useState } from 'react';
 import { Wrench, Eye, EyeOff } from 'lucide-react';
@@ -38,6 +38,7 @@ const RegisterPage = () => {
     const rightSectionRef = useRef(null);
     const { register } = useUser();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -146,10 +147,15 @@ const RegisterPage = () => {
             setPassword('');
 
             setTimeout(() => {
-                if (role === 'TECHNICIAN') {
-                    navigate('/technician/onboarding');
+                const from = location.state?.from?.pathname;
+                if (from) {
+                    navigate(from, { replace: true });
                 } else {
-                    navigate('/bookings');
+                    if (role === 'TECHNICIAN') {
+                        navigate('/technician/onboarding');
+                    } else {
+                        navigate('/bookings');
+                    }
                 }
             }, 1500);
         } else {
@@ -304,7 +310,7 @@ const RegisterPage = () => {
 
                             <Button
                                 type="submit"
-                                className="w-full shadow-[0_8px_20px_rgba(37,99,235,0.25)] hover:translate-y-[-1px] transition-transform duration-200"
+                                className="w-full shadow-[0_8px_20px_rgba(37,99,235,0.25)] hover:-translate-y-px transition-transform duration-200"
                                 size="lg"
                                 disabled={isLoading}
                             >
