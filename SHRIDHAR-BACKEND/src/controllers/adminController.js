@@ -112,6 +112,10 @@ exports.getAllTechnicians = async (req, res, next) => {
             filter['documents.verificationStatus'] = status.toUpperCase();
         }
 
+        if (req.query.isOnline !== undefined) {
+            filter.isOnline = req.query.isOnline === 'true';
+        }
+
         if (category) {
             // Find technicians who have this category in their list
             filter.categories = category;
@@ -496,29 +500,34 @@ exports.assignTechnician = async (req, res, next) => {
 
         if (!booking) return next(new AppError('No booking found with that ID', 404));
 
+        const oldTechnicianId = booking.technician;
+
         // Update technician
         booking.technician = technicianId;
-
-        // If booking was 'PENDING', move to 'ASSIGNED'
-        if (booking.status === 'PENDING') {
-            booking.status = 'ASSIGNED';
-        }
-
-        // Helper to generate Happy Pin (MOVED to Technician Accept logic)
-        // const securityPin = Math.floor(100000 + Math.random() * 900000).toString();
-        // booking.securityPin = securityPin;
+        booking.status = 'ASSIGNED'; // Reset status to ASSIGNED for the new technician to accept
 
         await booking.save({ validateBeforeSave: false });
 
-        // Notify Technician
+        // Notify New Technician
         const notificationService = require('../services/notificationService');
         await notificationService.send({
             recipient: technicianId,
             type: 'BOOKING_ASSIGNED',
             title: 'New Job Assigned',
-            message: `You have been assigned to a booking (ID: ${booking.img || booking._id})`,
+            message: `You have been assigned to a booking (ID: ${booking._id})`,
             data: { bookingId: booking._id }
         });
+
+        // Notify Old Technician (if exists and different)
+        if (oldTechnicianId && oldTechnicianId.toString() !== technicianId) {
+            await notificationService.send({
+                recipient: oldTechnicianId,
+                type: 'BOOKING_REMOVED',
+                title: 'Job Re-assigned',
+                message: `Booking (ID: ${booking._id}) has been re-assigned to another technician.`,
+                data: { bookingId: booking._id }
+            });
+        }
 
         const updatedBooking = await Booking.findById(booking._id)
             .populate('customer', 'name email phone')

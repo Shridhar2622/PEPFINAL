@@ -38,7 +38,7 @@ const BookingDetailPanel = ({ booking, isOpen, onClose, onHelp, onUpdateStatus, 
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
+                        className="fixed inset-0 bg-black/40 backdrop-blur-md z-100"
                     />
 
                     {/* Panel */}
@@ -47,7 +47,7 @@ const BookingDetailPanel = ({ booking, isOpen, onClose, onHelp, onUpdateStatus, 
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-slate-950 rounded-t-[3rem] border-t border-white/20 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                        className="fixed bottom-0 left-0 right-0 z-101 bg-white dark:bg-slate-950 rounded-t-[3rem] border-t border-white/20 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                     >
                         {/* Header */}
                         <div className="p-6 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
@@ -215,22 +215,15 @@ const BookingDetailPanel = ({ booking, isOpen, onClose, onHelp, onUpdateStatus, 
                                 Support
                             </button>
 
-                            {booking.status === 'Assigned' ? (
-                                <button
-                                    onClick={() => {
-                                        onUpdateStatus(booking.id, 'Completed');
-                                        onClose();
-                                        alert("Service marked as completed!");
-                                    }}
-                                    className="flex-[1.5] py-4 px-4 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
-                                >
-                                    Complete Service
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                            {['Assigned', 'In Progress'].includes(booking.status) && booking.securityPin ? (
+                                <div className="flex-[1.5] py-3 px-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-500/30 flex flex-col items-center justify-center text-sm">
+                                    <span className="text-[10px] uppercase opacity-80 font-medium tracking-wider">Share Happy Pin</span>
+                                    <span className="text-xl font-black tracking-widest font-mono">{booking.securityPin}</span>
+                                </div>
                             ) : (
                                 <button
                                     onClick={() => alert("Tracking live... (Simulation)")}
-                                    className="flex-[1.5] py-4 px-4 bg-rose-600 text-white rounded-2xl font-bold shadow-lg shadow-rose-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
+                                    className="flex-[1.5] py-4 px-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
                                 >
                                     Track Live
                                     <ChevronRight className="w-4 h-4" />

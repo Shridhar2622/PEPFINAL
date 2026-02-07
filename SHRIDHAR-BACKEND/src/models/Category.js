@@ -56,8 +56,20 @@ categorySchema.virtual('id').get(function () {
 });
 
 categorySchema.pre('save', function (next) {
-    this.slug = slugify(this.name, { lower: true });
-    next();
+    console.log('[DEBUG] Category pre-save hook running for:', this.name);
+    try {
+        if (this.name) {
+            this.slug = slugify(this.name, { lower: true });
+        }
+        if (typeof next === 'function') {
+            next();
+        } else {
+            console.error('[DEBUG] pre-save hook: next is not a function!', next);
+        }
+    } catch (error) {
+        console.error('[DEBUG] Category pre-save hook error:', error);
+        next(error);
+    }
 });
 
 const Category = mongoose.model('Category', categorySchema);

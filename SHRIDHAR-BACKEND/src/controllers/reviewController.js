@@ -6,7 +6,7 @@ const notificationService = require('../services/notificationService');
 
 exports.createReview = async (req, res, next) => {
     try {
-        const { rating, review } = req.body;
+        const { rating, technicianRating, review } = req.body;
         const { bookingId } = req.params;
 
         // 1. Check if booking exists
@@ -28,7 +28,8 @@ exports.createReview = async (req, res, next) => {
         // 4. Create Review
         const newReview = await Review.create({
             review,
-            rating,
+            rating, // Service Rating
+            technicianRating, // Technician Rating
             booking: bookingId,
             customer: req.user.id,
             technician: booking.technician,
@@ -99,7 +100,7 @@ exports.getAllReviews = async (req, res, next) => {
 
 exports.updateReview = async (req, res, next) => {
     try {
-        const { rating, review } = req.body;
+        const { rating, technicianRating, review } = req.body;
 
         // 1. Find review belonging to this booking
         const existingReview = await Review.findOne({ booking: req.params.bookingId });
@@ -114,8 +115,9 @@ exports.updateReview = async (req, res, next) => {
         }
 
         // 3. Update fields
-        existingReview.rating = rating;
-        existingReview.review = review;
+        if (rating) existingReview.rating = rating;
+        if (technicianRating) existingReview.technicianRating = technicianRating;
+        if (review) existingReview.review = review;
 
         // 4. Save (Triggers static calcAverageRatings via post-save hook)
         await existingReview.save();

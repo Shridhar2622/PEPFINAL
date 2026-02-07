@@ -18,7 +18,8 @@ const AdminCategories = () => {
         icon: 'Hammer',
         color: 'bg-indigo-100 text-indigo-600',
         price: '',
-        rating: '0'
+        rating: '0',
+        isActive: true
     });
 
     const filteredCategories = categories.filter(cat =>
@@ -36,6 +37,7 @@ const AdminCategories = () => {
         data.append('rating', formData.rating);
         data.append('icon', formData.icon);
         data.append('color', formData.color);
+        data.append('isActive', formData.isActive);
 
         if (formData.image instanceof File) {
             data.append('image', formData.image);
@@ -85,7 +87,8 @@ const AdminCategories = () => {
             icon: cat.icon || 'Hammer',
             color: cat.color || 'bg-indigo-100 text-indigo-600',
             price: cat.price || '',
-            rating: cat.rating || '4.8'
+            rating: cat.rating || '4.8',
+            isActive: cat.isActive !== false // Default to true if undefined
         });
         setIsAdding(true);
     };
@@ -139,6 +142,9 @@ const AdminCategories = () => {
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
                                 <div className="absolute bottom-4 left-6">
                                     <h4 className="text-white font-black text-xl italic tracking-tight uppercase leading-none">{cat.name}</h4>
+                                    {!cat.isActive && (
+                                        <span className="inline-block mt-2 px-2 py-0.5 bg-red-500/80 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider rounded">Inactive</span>
+                                    )}
                                 </div>
                                 <div className="absolute top-4 right-4 flex gap-2">
                                     <button
@@ -246,7 +252,20 @@ const AdminCategories = () => {
                                         }}
                                         className="w-full p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-indigo-900/30 dark:file:text-indigo-400"
                                     />
-                                    {/* Removed unnecessary "Live Preview" block */}
+                                    {/* Status Toggle */}
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-slate-900 dark:text-white">Active Status</span>
+                                            <span className="text-[10px] text-slate-400 font-medium">Visible to users</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
+                                            className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${formData.isActive ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                                        >
+                                            <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform duration-300 shadow-sm ${formData.isActive ? 'translate-x-5' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="col-span-2 pt-10 border-t border-slate-100 dark:border-slate-800 flex gap-4">

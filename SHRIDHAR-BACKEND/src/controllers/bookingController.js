@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const Review = require('../models/Review');
@@ -20,30 +21,49 @@ exports.createBooking = async (req, res, next) => {
         let finalServiceId = serviceId;
 
         // 1. Resolve Service and Category
+        console.log('[DEBUG] createBooking Payload:', req.body);
         if (serviceId) {
             const serviceDoc = await Service.findById(serviceId);
-            if (!serviceDoc) return next(new AppError('Service not found', 404));
+            if (!serviceDoc) {
+                console.error('[DEBUG] Service not found:', serviceId);
+                return next(new AppError('Service not found', 404));
+            }
 
             // Case-insensitive lookup for robustness
-            const categoryDoc = await Category.findOne({
-                name: { $regex: new RegExp(`^${serviceDoc.category}$`, 'i') }
-            });
-            if (categoryDoc) finalCategoryId = categoryDoc._id;
+            // IMPROVEMENT: Check if serviceDoc.category is already an Object ID
+            if (mongoose.Types.ObjectId.isValid(serviceDoc.category)) {
+                finalCategoryId = serviceDoc.category;
+            } else {
+                const categoryDoc = await Category.findOne({
+                    name: { $regex: new RegExp(`^${serviceDoc.category}$`, 'i') }
+                });
+                if (categoryDoc) finalCategoryId = categoryDoc._id;
+            }
             finalServiceId = serviceId;
         } else if (categoryId) {
             // Fallback: Check if categoryId is actually a service ID
             const potentialService = await Service.findById(categoryId);
             if (potentialService) {
                 finalServiceId = categoryId;
-                const categoryDoc = await Category.findOne({
-                    name: { $regex: new RegExp(`^${potentialService.category}$`, 'i') }
-                });
-                if (categoryDoc) finalCategoryId = categoryDoc._id;
+                // Same check here
+                if (mongoose.Types.ObjectId.isValid(potentialService.category)) {
+                    finalCategoryId = potentialService.category;
+                } else {
+                    const categoryDoc = await Category.findOne({
+                        name: { $regex: new RegExp(`^${potentialService.category}$`, 'i') }
+                    });
+                    if (categoryDoc) finalCategoryId = categoryDoc._id;
+                }
+            } else {
+                // It might be a real category ID
+                finalCategoryId = categoryId;
             }
         }
 
+        console.log('[DEBUG] Resolved IDs:', { finalServiceId, finalCategoryId });
+
         if (!finalCategoryId) {
-            return next(new AppError('A valid category or service must be provided', 400));
+            return next(new AppError('A valid category or service must be provided (Category Resolution Failed)', 400));
         }
 
         // 2. Check if category exists AND is active
@@ -213,11 +233,13 @@ exports.updateBookingStatus = async (req, res, next) => {
 
         const isTechnician = booking.technician?.toString() === req.user.id;
         const isCustomer = booking.customer?.toString() === req.user.id;
+        const isAdmin = req.user.role === 'ADMIN';
 
         // State Machine Logic
         if (status === 'CANCELLED') {
             // Both can cancel if pending, assigned, accepted OR IN_PROGRESS
-            if (!['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status)) {
+            // Admin can always cancel
+            if (!isAdmin && !['PENDING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status)) {
                 return next(new AppError('Cannot cancel booking at this stage', 400));
             }
             // Notification target logic
@@ -235,9 +257,10 @@ exports.updateBookingStatus = async (req, res, next) => {
             booking.status = 'CANCELLED'; // EXPLICITLY SET STATUS FOR PERSISTENCE
         }
         else if (['ACCEPTED', 'REJECTED'].includes(status)) {
-            // Only Technician can accept/reject
-            if (!isTechnician) return next(new AppError('Only technician can accept/reject', 403));
-            if (!['PENDING', 'ASSIGNED'].includes(booking.status)) return next(new AppError('Can only update pending or assigned bookings', 400));
+            // Only Technician can accept/reject (Admin generally shouldn't interfere here unless re-assigning, which is a different flow)
+            if (!isTechnician && !isAdmin) return next(new AppError('Only technician can accept/reject', 403));
+
+            if (!isAdmin && !['PENDING', 'ASSIGNED'].includes(booking.status)) return next(new AppError('Can only update pending or assigned bookings', 400));
 
             // Notify Customer
             await notificationService.send({
@@ -265,13 +288,15 @@ exports.updateBookingStatus = async (req, res, next) => {
             }
         }
         else if (['IN_PROGRESS', 'COMPLETED'].includes(status)) {
-            // Only Technician can progress
-            if (!isTechnician) return next(new AppError('Only technician can update progress', 403));
+            // Only Technician or Admin can progress
+            if (!isTechnician && !isAdmin) return next(new AppError('Only technician can update progress', 403));
 
             // Validate flow: ACCEPTED -> IN_PROGRESS -> COMPLETED
+            // Admin can force jump states if needed, but let's keep flow for sanity mainly
             const isValidFlow =
                 (booking.status === 'ACCEPTED' && status === 'IN_PROGRESS') ||
-                (booking.status === 'IN_PROGRESS' && status === 'COMPLETED');
+                (booking.status === 'IN_PROGRESS' && status === 'COMPLETED') ||
+                isAdmin; // Admin can jump
 
             if (!isValidFlow) return next(new AppError(`Invalid status transition from ${booking.status} to ${status}`, 400));
 
@@ -284,16 +309,18 @@ exports.updateBookingStatus = async (req, res, next) => {
                     filesCount: req.files?.length || 0
                 });
 
-                // 1. Verify Happy Pin
-                const inputPin = securityPin ? String(securityPin).trim() : '';
-                const storedPin = booking.securityPin ? String(booking.securityPin).trim() : '';
+                // 1. Verify Happy Pin (Skip for Admin)
+                if (!isAdmin) {
+                    const inputPin = securityPin ? String(securityPin).trim() : '';
+                    const storedPin = booking.securityPin ? String(booking.securityPin).trim() : '';
 
-                if (!inputPin || inputPin !== storedPin) {
-                    return next(new AppError(`Invalid Happy Pin provided.`, 400));
+                    if (!inputPin || inputPin !== storedPin) {
+                        return next(new AppError(`Invalid Happy Pin provided.`, 400));
+                    }
                 }
 
-                // 2. Enforce Work Photos (Compulsory)
-                if ((!req.files || req.files.length === 0) && (!booking.partImages || booking.partImages.length === 0)) {
+                // 2. Enforce Work Photos (Compulsory) - Skip for Admin
+                if (!isAdmin && (!req.files || req.files.length === 0) && (!booking.partImages || booking.partImages.length === 0)) {
                     return next(new AppError('At least one photo of the completed work is required', 400));
                 }
 

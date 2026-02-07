@@ -47,6 +47,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    pincode: {
+        type: String,
+        trim: true,
+        maxlength: 6
+    },
     location: {
         // GeoJSON
         type: {
@@ -71,6 +76,10 @@ const userSchema = new mongoose.Schema({
         default: true
     },
     isTechnicianOnboarded: {
+        type: Boolean,
+        default: false
+    },
+    isOnline: {
         type: Boolean,
         default: false
     },

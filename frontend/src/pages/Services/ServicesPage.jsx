@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Search, Grid, Zap, Refrigerator, Droplets, Sparkles, ShieldCheck,
-    Award, CheckCircle, ChevronRight, X, Filter, LayoutGrid, Heart, Star, Calendar, Clock, MapPin, FileText
+    Award, CheckCircle, ChevronRight, X, Filter, LayoutGrid, Heart, Star, Clock, MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../components/common/Button';
@@ -18,64 +18,56 @@ const ServicesPage = () => {
     const { addBooking } = useBookings();
     const { isAuthenticated } = useUser();
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState(location.state?.category || 'All');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedBookingItem, setSelectedBookingItem] = useState(null);
-    const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-
-    // Fetch Categories for Sidebar
+    // -- Data Fetching First --
     const { data: categoriesRaw = [], isLoading: categoriesLoading } = useCategories();
 
-    // Filter Categories (Sidebar)
+    // Filter out internal/debug categories
     const sidebarCategories = (categoriesRaw || []).filter(c =>
         c.isActive !== false &&
         !c.name.toUpperCase().includes('P2_CAT') &&
         !c.name.toUpperCase().includes('DEBUG')
     ).sort((a, b) => (a.order || 99) - (b.order || 99));
 
-    // Server-side Filtering Params
-    const queryParams = {
-        category: selectedCategory === 'All' ? undefined : selectedCategory,
-        search: searchQuery || undefined,
-        limit: 100 // Fetch reasonably large number for now to fill grid
+    // -- State --
+    const [searchQuery, setSearchQuery] = useState('');
+    // Use ID for state, defaulting to 'All'
+    const [selectedCategoryId, setSelectedCategoryId] = useState(location.state?.categoryId || location.state?.category || 'All');
+
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [selectedServiceForBooking, setSelectedServiceForBooking] = useState(null);
+    const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+    // Helpers to get Category Name
+    const getCategoryName = (id) => {
+        if (id === 'All') return 'All Services';
+        const cat = sidebarCategories.find(c => c._id === id || c.id === id);
+        return cat ? cat.name : 'Services';
     };
 
-    // Fetch Services for Grid (Server-side filtered)
-    const { data: servicesData, isLoading: servicesLoading } = useServices(queryParams);
-    const filteredServices = servicesData?.services || [];
+    // Prepare Query Params for Services
+    const serviceParams = {
+        category: selectedCategoryId === 'All' ? undefined : selectedCategoryId,
+        search: searchQuery || undefined,
+        limit: 100 // Fetch enough to fill the page
+    };
 
-    // Client-side filtering removed as backend now handles it.
-    // const getFilteredServices = () => { ... } -> Removed
+    const { data: servicesData, isLoading: servicesLoading } = useServices(serviceParams);
+    const services = servicesData?.services || [];
 
-    // Verify selected category exists
-    useEffect(() => {
-        if (selectedCategory && selectedCategory !== 'All' && !categoriesLoading && sidebarCategories.length > 0) {
-            const exists = sidebarCategories.some(c =>
-                c.name.toLowerCase() === selectedCategory.toLowerCase()
-            );
-            // If category doesn't exist in fetched list, maybe switch to All? 
-            // Keeping it for now as it might match a service category even if category list is partial.
-        }
-    }, [selectedCategory, categoriesLoading, sidebarCategories]);
+    // -- Handlers --
+    const handleCategorySelect = (id) => {
+        setSelectedCategoryId(id);
+        setIsMobileFilterOpen(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const handleBookClick = (service) => {
         if (!isAuthenticated) {
             navigate('/login');
             return;
         }
-
-        const bookingItem = {
-            id: service.id || service._id,
-            title: service.title,
-            price: service.price,
-            image: service.headerImage || service.image,
-            description: service.description,
-            serviceId: service.id || service._id // Ensure ID is passed explicitly if needed
-        };
-
-        setSelectedBookingItem(bookingItem);
-        setIsModalOpen(true);
+        setSelectedServiceForBooking(service);
+        setIsBookingModalOpen(true);
     };
 
     const getCategoryIcon = (name) => {
@@ -91,9 +83,23 @@ const ServicesPage = () => {
         return icons[key] || <LayoutGrid className="w-5 h-5" />;
     };
 
+    // Helper to safely display category name from service object
+    const getServiceCategoryName = (service) => {
+        // If populated, it is an object with .name
+        if (service.category && typeof service.category === 'object') {
+            return service.category.name;
+        }
+        // If not populated (just ID string), try to find in local categories
+        if (service.category) {
+            const cat = sidebarCategories.find(c => c._id === service.category || c.id === service.category);
+            return cat ? cat.name : 'General';
+        }
+        return 'General';
+    };
+
     return (
         <div className="min-h-screen bg-[#FAFAFB] dark:bg-[#080809] transition-colors duration-700 relative overflow-x-hidden">
-            {/* Elegant Background Elements */}
+            {/* Background Decoration */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-0 right-0 w-[60%] h-[40%] bg-indigo-500/5 dark:bg-indigo-400/5 blur-[120px] rounded-full" />
                 <div className="absolute bottom-0 left-0 w-[50%] h-[30%] bg-rose-500/3 dark:bg-rose-400/3 blur-[100px] rounded-full" />
@@ -101,232 +107,171 @@ const ServicesPage = () => {
 
             <div className="relative z-10 max-w-[1600px] mx-auto flex flex-col lg:flex-row min-h-screen">
 
-                {/* Desktop Discovery Sidebar */}
-                <aside className="hidden lg:flex flex-col w-80 border-r border-slate-200/50 dark:border-slate-800/50 p-10 space-y-12 shrink-0">
-                    <div className="space-y-2">
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Categories</span>
-                        <nav className="space-y-1">
+                {/* -- SIDEBAR (Desktop) -- */}
+                <aside className="hidden lg:flex flex-col w-80 border-r border-slate-200/50 dark:border-slate-800/50 p-10 space-y-8 shrink-0 h-screen sticky top-0 overflow-y-auto hide-scrollbar">
+                    <div>
+                        <h2 className="text-2xl font-[1000] tracking-tighter uppercase italic mb-8 text-slate-900 dark:text-white">
+                            Explore <span className="text-indigo-600 dark:text-indigo-400 not-italic">Services.</span>
+                        </h2>
+
+                        <nav className="space-y-2">
                             <button
-                                onClick={() => setSelectedCategory('All')}
-                                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-500 group ${selectedCategory === 'All' ? 'bg-white dark:bg-white text-slate-900 shadow-2xl scale-[1.02]' : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+                                onClick={() => handleCategorySelect('All')}
+                                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300 group ${selectedCategoryId === 'All' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'}`}
                             >
                                 <div className="flex items-center gap-4">
-                                    <Grid className={`w-5 h-5 transition-colors ${selectedCategory === 'All' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                    <span className="font-bold text-sm">All Essentials</span>
+                                    <Grid className={`w-5 h-5 ${selectedCategoryId === 'All' ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`} />
+                                    <span className="font-bold text-sm">All Services</span>
                                 </div>
-                                {selectedCategory === 'All' && <ChevronRight className="w-4 h-4 text-indigo-500 animate-pulse" />}
+                                {selectedCategoryId === 'All' && <ChevronRight className="w-4 h-4 text-white" />}
                             </button>
 
                             {sidebarCategories.map((cat) => (
                                 <button
                                     key={cat.id || cat._id}
-                                    onClick={() => setSelectedCategory(cat.name)}
-                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-500 group ${selectedCategory === cat.name ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30 scale-[1.02]' : 'text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+                                    onClick={() => handleCategorySelect(cat.id || cat._id)}
+                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300 group ${selectedCategoryId === (cat.id || cat._id) ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'}`}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className={`${selectedCategory === cat.name ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`}>
+                                        <div className={`${selectedCategoryId === (cat.id || cat._id) ? 'text-white' : 'text-slate-400 group-hover:text-indigo-500'}`}>
                                             {getCategoryIcon(cat.name)}
                                         </div>
-                                        <span className="font-bold text-sm tracking-tight">{cat.name}</span>
+                                        <span className="font-bold text-sm">{cat.name}</span>
                                     </div>
-                                    <ChevronRight className={`w-4 h-4 transition-all duration-500 ${selectedCategory === cat.name ? 'translate-x-1 opacity-100' : 'opacity-0 -translate-x-2'}`} />
+                                    {selectedCategoryId === (cat.id || cat._id) && <ChevronRight className="w-4 h-4 text-white" />}
                                 </button>
                             ))}
                         </nav>
                     </div>
                 </aside>
 
-                {/* Main Experience Area */}
-                <main className="flex-1 p-6 md:p-12 lg:p-20">
+                {/* -- MAIN CONTENT -- */}
+                <main className="flex-1 p-6 md:p-12 lg:p-16">
                     <div className="max-w-6xl mx-auto">
-                        {/* Dramatic Header */}
-                        <header className="mb-20">
-                            <motion.div
-                                initial={{ opacity: 0, x: -30 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="flex flex-col lg:flex-row lg:items-end justify-between gap-12"
-                            >
-                                <div className="space-y-6">
-                                    <span className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest ring-1 ring-emerald-500/20">
-                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                                        98% Success Rate This Week
-                                    </span>
-                                    <h1 className="text-6xl md:text-8xl font-[1000] text-slate-900 dark:text-white tracking-[-0.07em] leading-[0.9] italic">
-                                        ELEVATED <br />
-                                        <span className="text-indigo-600 dark:text-indigo-400 not-italic tracking-[-0.04em] uppercase">Services.</span>
-                                    </h1>
-                                    <p className="text-slate-500 dark:text-slate-400 text-xl md:text-2xl font-medium max-w-xl leading-relaxed">
-                                        Hand-picked experts for your most demanding home needs. Zero compromise.
-                                    </p>
-                                </div>
 
-                                <div className="relative group w-full lg:w-[400px]">
-                                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-rose-500 rounded-[2.5rem] blur opacity-25 group-focus-within:opacity-100 transition duration-1000" />
-                                    <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 px-8 py-6">
-                                        <Search className="w-6 h-6 text-slate-400 mr-4" />
+                        {/* Header & Search */}
+                        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
+                            <div>
+                                <h1 className="text-4xl md:text-5xl font-[1000] text-slate-900 dark:text-white tracking-tighter uppercase italic mb-4">
+                                    {getCategoryName(selectedCategoryId)}
+                                </h1>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium">
+                                    {servicesLoading ? 'Loading ecosystem...' : `${services.length} services available`}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                                <div className="relative group w-full md:w-[320px]">
+                                    <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-rose-500 rounded-2xl blur opacity-20 group-focus-within:opacity-100 transition duration-500" />
+                                    <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 px-5 py-3">
+                                        <Search className="w-5 h-5 text-slate-400 mr-3" />
                                         <input
                                             type="text"
-                                            placeholder="What do you need today?"
-                                            className="bg-transparent border-none outline-none w-full text-slate-900 dark:text-white font-bold placeholder:text-slate-300"
+                                            placeholder="Search services..."
+                                            className="bg-transparent border-none outline-none w-full text-slate-900 dark:text-white font-bold text-sm placeholder:text-slate-300"
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                         />
-                                        <button
-                                            onClick={() => setIsMobileFilterOpen(true)}
-                                            className="lg:hidden p-2 rounded-full bg-slate-50 dark:bg-slate-800 ml-auto"
-                                        >
-                                            <Filter className="w-5 h-5 text-slate-600" />
-                                        </button>
                                     </div>
                                 </div>
-                            </motion.div>
+                                <button
+                                    onClick={() => setIsMobileFilterOpen(true)}
+                                    className="lg:hidden p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-600 dark:text-slate-300"
+                                >
+                                    <Filter className="w-5 h-5" />
+                                </button>
+                            </div>
                         </header>
 
-                        {/* The Grid of Excellence */}
-                        <AnimatePresence mode="wait">
+                        {/* Services Grid */}
+                        <div className="min-h-100">
                             {servicesLoading ? (
-                                <div key="loader" className="flex flex-col items-center justify-center py-40 space-y-6">
-                                    <div className="w-16 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                                        <motion.div
-                                            initial={{ x: '-100%' }}
-                                            animate={{ x: '100%' }}
-                                            transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-                                            className="w-1/2 h-full bg-indigo-600"
-                                        />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">Initializing Catalog</span>
+                                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Loading Services...</p>
                                 </div>
-                            ) : filteredServices.length > 0 ? (
-                                <motion.div
-                                    key="grid"
-                                    initial="hidden"
-                                    animate="show"
-                                    variants={{
-                                        show: { transition: { staggerChildren: 0.15 } }
-                                    }}
-                                    className="grid grid-cols-1 md:grid-cols-2 gap-12"
-                                >
-                                    {filteredServices.map((service) => (
+                            ) : services.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8">
+                                    {services.map((service) => (
                                         <motion.div
+                                            initial={{ opacity: 0, y: 20 }}
+                                            animate={{ opacity: 1, y: 0 }}
                                             key={service.id || service._id}
-                                            variants={{
-                                                hidden: { opacity: 0, y: 50 },
-                                                show: { opacity: 1, y: 0, transition: { type: 'spring', damping: 20 } }
-                                            }}
-                                            className="group relative bg-white dark:bg-[#0E0E10] rounded-[3.5rem] p-4 border border-slate-100 dark:border-slate-800 shadow-2xl hover:shadow-indigo-500/10 transition-all duration-700"
+                                            className="group bg-white dark:bg-[#0E0E10] rounded-[2.5rem] border border-slate-100 dark:border-slate-800 p-3 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-500 flex flex-col"
                                         >
-                                            <div className="aspect-[1.4/1] relative overflow-hidden rounded-[3rem] mb-10">
+                                            <div className="aspect-video relative overflow-hidden rounded-4xl mb-4">
                                                 <img
-                                                    src={service.headerImage || service.image || 'default-service.jpg'}
+                                                    src={service.headerImage || service.image || 'https://images.unsplash.com/photo-1581578731117-104f2a41d58e?auto=format&fit=crop&q=80'}
                                                     alt={service.title}
-                                                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 grayscale-[20%] group-hover:grayscale-0"
+                                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-
-                                                <div className="absolute top-8 left-8 flex flex-col gap-3">
-                                                    <div className="px-6 py-3 bg-white/90 dark:bg-black/80 backdrop-blur-xl rounded-full text-[11px] font-[1000] uppercase tracking-widest text-slate-900 dark:text-white shadow-2xl flex items-center gap-3">
-                                                        <Award className="w-4 h-4 text-indigo-500" /> Verified
-                                                    </div>
-                                                </div>
-
-                                                <div className="absolute bottom-8 left-8 right-8">
-                                                    <div className="flex items-center gap-4 mb-4">
-                                                        <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl rotate-[-4deg] group-hover:rotate-0 transition-transform">
-                                                            {getCategoryIcon(service.category)}
-                                                        </div>
-                                                        <h3 className="text-3xl md:text-4xl font-[1000] text-white tracking-tighter uppercase italic line-clamp-2">{service.title}</h3>
-                                                    </div>
+                                                <div className="absolute top-4 left-4 bg-white/90 dark:bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-900 dark:text-white flex items-center gap-1.5 shadow-sm">
+                                                    <Award className="w-3 h-3 text-indigo-500" />
+                                                    Verified
                                                 </div>
                                             </div>
 
-                                            <div className="px-8 pb-8 space-y-8">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-bold italic line-clamp-1">
-                                                        {service.category || "Premium Service"}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-700">
-                                                        <Star className={`w-4 h-4 ${service.rating > 0 ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
-                                                        <span className="text-slate-900 dark:text-white font-black text-sm">
-                                                            {service.rating > 0 ? service.rating : 'New'}
-                                                        </span>
+                                            <div className="px-4 pb-4 flex-1 flex flex-col">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded-lg">
+                                                        {getServiceCategoryName(service)}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                                        <span className="text-sm font-bold text-slate-900 dark:text-white">{service.rating > 0 ? service.rating : 'New'}</span>
                                                     </div>
                                                 </div>
 
-                                                <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-medium line-clamp-3">
-                                                    {service.description || "Premium bespoke service with dedicated project management and post-service warranty."}
+                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                                    {service.title}
+                                                </h3>
+                                                <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-6 line-clamp-2">
+                                                    {service.description}
                                                 </p>
 
-                                                <div className="grid grid-cols-2 gap-y-4">
-                                                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-tighter">
-                                                        <CheckCircle className="w-5 h-5 text-indigo-500" /> Background Checked
-                                                    </div>
-                                                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-tighter">
-                                                        <CheckCircle className="w-5 h-5 text-indigo-500" /> ID Verified
-                                                    </div>
-                                                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-tighter">
-                                                        <Clock className="w-5 h-5 text-indigo-500" /> On-Time Guarantee
-                                                    </div>
-                                                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-tighter">
-                                                        <ShieldCheck className="w-5 h-5 text-indigo-500" /> Insurance Covered
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-between pt-8 border-t border-slate-100 dark:border-slate-800">
+                                                <div className="mt-auto pt-4 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between">
                                                     <div>
-                                                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] block mb-1">Service Rate</span>
-                                                        <span className="text-4xl font-black text-slate-900 dark:text-white">₹{service.price}</span>
+                                                        <p className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">Itera Price</p>
+                                                        <p className="text-2xl font-black text-slate-900 dark:text-white">₹{service.price}</p>
                                                     </div>
-                                                    <div className="flex gap-3">
-                                                        <button
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            className="rounded-xl px-4 py-2 h-auto text-xs font-bold uppercase tracking-wider"
                                                             onClick={() => navigate(`/services/${service.id || service._id}`)}
-                                                            className="px-6 py-3 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white font-bold text-xs uppercase tracking-wider hover:border-indigo-600 hover:text-indigo-600 transition-colors"
                                                         >
                                                             Details
-                                                        </button>
-                                                        <button
+                                                        </Button>
+                                                        <Button
+                                                            className="rounded-xl px-5 py-2 h-auto text-xs font-bold uppercase tracking-wider bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20"
                                                             onClick={() => handleBookClick(service)}
-                                                            className="px-8 py-3 rounded-2xl bg-indigo-600 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all"
                                                         >
-                                                            Book Now
-                                                        </button>
+                                                            Book
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             </div>
                                         </motion.div>
                                     ))}
-                                </motion.div>
+                                </div>
                             ) : (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="flex flex-col items-center justify-center py-40 px-6 text-center bg-white dark:bg-[#0E0E10] rounded-[4rem] border border-dashed border-slate-200 dark:border-slate-800"
-                                >
-                                    <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mb-10 shadow-inner">
-                                        <Search className="w-10 h-10 text-slate-200" />
-                                    </div>
-                                    <h3 className="text-3xl font-[1000] text-slate-900 dark:text-white mb-4 tracking-tighter uppercase italic">Refinement Needed</h3>
-                                    <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-sm text-lg font-medium leading-relaxed">
-                                        {selectedCategory !== 'All'
-                                            ? `No services found in "${selectedCategory}". Try checking back later or browse other categories.`
-                                            : "Our catalog is currently being updated. Please check back soon."}
-                                    </p>
-                                    <Button
-                                        onClick={() => {
-                                            setSelectedCategory('All');
-                                            setSearchQuery('');
-                                        }}
-                                        className="px-10 py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase text-xs tracking-widest hover:shadow-2xl hover:shadow-indigo-600/40 transition-all"
-                                    >
+                                <div className="text-center py-20 bg-white dark:bg-slate-900 rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-800">
+                                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No services found</h3>
+                                    <p className="text-slate-500 dark:text-slate-400 mb-6">We couldn't find any services matching your criteria.</p>
+                                    <Button onClick={() => { setSelectedCategoryId('All'); setSearchQuery(''); }}>
                                         Clear Filters
                                     </Button>
-                                </motion.div>
+                                </div>
                             )}
-                        </AnimatePresence>
+                        </div>
                     </div>
                 </main>
             </div>
 
-            {/* Mobile Filter Sheet */}
+            <MobileBottomNav />
+
+            {/* -- MOBILE FILTER SHEET -- */}
             <AnimatePresence>
                 {isMobileFilterOpen && (
                     <>
@@ -335,41 +280,36 @@ const ServicesPage = () => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileFilterOpen(false)}
-                            className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-[100] lg:hidden"
+                            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-100 lg:hidden"
                         />
                         <motion.div
                             initial={{ y: '100%' }}
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0A0A0B] z-[101] rounded-t-[3.5rem] p-10 lg:hidden shadow-[0_-20px_80px_rgba(0,0,0,0.4)]"
+                            className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0A0A0B] z-101 rounded-t-[2.5rem] p-6 lg:hidden max-h-[80vh] overflow-y-auto"
                         >
-                            <div className="w-16 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto mb-10" />
-                            <div className="flex items-center justify-between mb-12">
-                                <h2 className="text-3xl font-[1000] tracking-tighter uppercase italic">Curate <span className="text-indigo-600 not-italic">Catalog.</span></h2>
-                                <button onClick={() => setIsMobileFilterOpen(false)} className="w-12 h-12 flex items-center justify-center bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
+                            <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto mb-8" />
+                            <h3 className="text-xl font-[1000] uppercase italic tracking-tighter mb-6 text-slate-900 dark:text-white">Select Category</h3>
 
-                            <div className="grid grid-cols-1 gap-3 overflow-y-auto max-h-[60vh] pb-10 hide-scrollbar">
+                            <div className="grid grid-cols-1 gap-2">
                                 <button
-                                    onClick={() => { setSelectedCategory('All'); setIsMobileFilterOpen(false); }}
-                                    className={`w-full flex items-center gap-4 px-8 py-6 rounded-3xl font-[1000] text-xs uppercase tracking-widest transition-all ${selectedCategory === 'All' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-50 dark:bg-slate-900 text-slate-500'}`}
+                                    onClick={() => handleCategorySelect('All')}
+                                    className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-bold text-sm transition-all ${selectedCategoryId === 'All' ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-900 text-slate-500'}`}
                                 >
                                     <Grid className="w-5 h-5" /> All Services
                                 </button>
                                 {sidebarCategories.map(cat => (
                                     <button
                                         key={cat.id || cat._id}
-                                        onClick={() => { setSelectedCategory(cat.name); setIsMobileFilterOpen(false); }}
-                                        className={`w-full flex items-center justify-between px-8 py-6 rounded-3xl font-[1000] text-xs uppercase tracking-widest transition-all ${selectedCategory === cat.name ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-900 text-slate-500'}`}
+                                        onClick={() => handleCategorySelect(cat.id || cat._id)}
+                                        className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl font-bold text-sm transition-all ${selectedCategoryId === (cat.id || cat._id) ? 'bg-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-900 text-slate-500'}`}
                                     >
                                         <div className="flex items-center gap-4">
                                             {getCategoryIcon(cat.name)}
                                             {cat.name}
                                         </div>
-                                        <ChevronRight className="w-4 h-4 opacity-40" />
+                                        {selectedCategoryId === (cat.id || cat._id) && <CheckCircle className="w-4 h-4" />}
                                     </button>
                                 ))}
                             </div>
@@ -378,13 +318,12 @@ const ServicesPage = () => {
                 )}
             </AnimatePresence>
 
-            <MobileBottomNav />
-
-            {selectedBookingItem && (
+            {/* -- BOOKING MODAL -- */}
+            {selectedServiceForBooking && (
                 <BookingModal
-                    isOpen={isModalOpen}
-                    onClose={() => setIsModalOpen(false)}
-                    service={selectedBookingItem}
+                    isOpen={isBookingModalOpen}
+                    onClose={() => setIsBookingModalOpen(false)}
+                    service={selectedServiceForBooking}
                     onConfirm={async (data) => {
                         try {
                             return await addBooking(data);

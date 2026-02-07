@@ -304,7 +304,10 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
               const uniqueKey = cat.id || cat._id || idx;
 
               // Find first service in this category for data fallback
-              const relatedService = services.find(s => s.category?.toLowerCase() === cat.name?.toLowerCase());
+              const relatedService = services.find(s => {
+                const sCat = s.category?.name || s.category;
+                return typeof sCat === 'string' && sCat.toLowerCase() === cat.name?.toLowerCase();
+              });
               const price = cat.price || relatedService?.price || 0;
               const rating = cat.rating || relatedService?.rating || 'New';
 

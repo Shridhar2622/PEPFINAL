@@ -13,8 +13,15 @@ exports.register = async (req, res, next) => {
             email: req.body.email,
             password: req.body.password,
             phone: req.body.phone,
-            role: req.body.role || 'USER' // Validation layer ensures only USER/TECHNICIAN
+            role: req.body.role || 'USER', // Validation layer ensures only USER/TECHNICIAN
+            pincode: req.body.pincode,
+            address: req.body.address
         });
+
+        // Pincode Restriction Logic
+        if (req.body.pincode !== '845438') {
+            return next(new AppError('Service currently not available in your location. We only serve pincode 845438.', 400));
+        }
 
         createSendToken(newUser, 201, res);
     } catch (err) {

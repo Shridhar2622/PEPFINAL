@@ -12,7 +12,8 @@ const CategoryGrid = ({ categories = [], services = [], onBook, onDetails }) => 
     const stats = React.useMemo(() => {
         const map = {};
         services.forEach(service => {
-            const catId = service.category?.toLowerCase();
+            const catName = service.category?.name || service.category;
+            const catId = (typeof catName === 'string') ? catName.toLowerCase() : '';
             if (!map[catId]) {
                 map[catId] = {
                     minPrice: Infinity,

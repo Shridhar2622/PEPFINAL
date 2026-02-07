@@ -10,7 +10,13 @@ const reviewSchema = new mongoose.Schema({
         type: Number,
         min: 1,
         max: 5,
-        required: [true, 'Rating is required']
+        required: [true, 'Service rating is required']
+    },
+    technicianRating: {
+        type: Number,
+        min: 1,
+        max: 5,
+        required: [true, 'Technician rating is required']
     },
     createdAt: {
         type: Date,
@@ -60,7 +66,7 @@ reviewSchema.statics.calcAverageRatings = async function (technicianUserId) {
             $group: {
                 _id: '$technician',
                 nRating: { $sum: 1 },
-                avgRating: { $avg: '$rating' }
+                avgRating: { $avg: '$technicianRating' }
             }
         }
     ]);
@@ -74,7 +80,7 @@ reviewSchema.statics.calcAverageRatings = async function (technicianUserId) {
             $group: {
                 _id: '$category',
                 nRating: { $sum: 1 },
-                avgRating: { $avg: '$rating' }
+                avgRating: { $avg: '$technicianRating' }
             }
         }
     ]);
@@ -91,7 +97,8 @@ reviewSchema.statics.calcAverageRatings = async function (technicianUserId) {
             { user: technicianUserId },
             {
                 avgRating: Math.round(stats[0].avgRating * 10) / 10,
-                totalJobs: stats[0].nRating,
+                reviewCount: stats[0].nRating,
+                totalJobs: stats[0].nRating, // Keeping for backward compatibility if used elsewhere as review count
                 categoryRatings: categoryRatings
             }
         );
@@ -99,7 +106,8 @@ reviewSchema.statics.calcAverageRatings = async function (technicianUserId) {
         await TechnicianProfile.findOneAndUpdate(
             { user: technicianUserId },
             {
-                avgRating: 0, // Reset to 0 when no reviews
+                avgRating: 0,
+                reviewCount: 0,
                 totalJobs: 0,
                 categoryRatings: []
             }

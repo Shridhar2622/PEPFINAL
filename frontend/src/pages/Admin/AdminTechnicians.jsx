@@ -24,6 +24,7 @@ const AdminTechnicians = () => {
 
     // Approval State
     const [approvalCategories, setApprovalCategories] = React.useState([]);
+    const [filterOnline, setFilterOnline] = React.useState('all'); // 'all', 'online', 'offline'
 
     const fetchTechnicians = async () => {
         setLoading(true);
@@ -36,6 +37,9 @@ const AdminTechnicians = () => {
             };
             if (activeTab === 'verified' && selectedCategory) {
                 params.category = selectedCategory;
+            }
+            if (activeTab === 'verified' && filterOnline !== 'all') {
+                params.isOnline = filterOnline === 'online';
             }
 
             const res = await client.get('/admin/technicians', { params });
@@ -51,7 +55,7 @@ const AdminTechnicians = () => {
 
     React.useEffect(() => {
         fetchTechnicians();
-    }, [activeTab, page, selectedCategory]);
+    }, [activeTab, page, selectedCategory, filterOnline]);
 
     const handleAddTech = async (e) => {
         e.preventDefault();
@@ -137,6 +141,12 @@ const AdminTechnicians = () => {
         return <span className="px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full text-[9px] font-black uppercase tracking-widest">Pending</span>;
     };
 
+    const OnlineBadge = ({ isOnline }) => (
+        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isOnline ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}>
+            {isOnline ? 'Online' : 'Offline'}
+        </span>
+    );
+
     // Filter by search locally since backend API might not support complex search yet
     const displayTechnicians = technicians.filter(tech => {
         if (!searchQuery) return true;
@@ -193,20 +203,36 @@ const AdminTechnicians = () => {
                     ))}
                 </div>
 
-                {/* Category Filter */}
+                {/* Category & Online Filter */}
                 {activeTab === 'verified' && (
-                    <div className="relative">
-                        <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <select
-                            value={selectedCategory}
-                            onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
-                            className="pl-10 pr-8 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer"
-                        >
-                            <option value="">All Categories</option>
-                            {categories.map(cat => (
-                                <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
+                    <div className="flex items-center gap-3">
+                        {/* Status Filter */}
+                        <div className="relative">
+                            <select
+                                value={filterOnline}
+                                onChange={(e) => { setFilterOnline(e.target.value); setPage(1); }}
+                                className="pl-4 pr-8 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="online">Online Only</option>
+                                <option value="offline">Offline Only</option>
+                            </select>
+                        </div>
+
+                        <div className="relative">
+                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <select
+                                value={selectedCategory}
+                                onChange={(e) => { setSelectedCategory(e.target.value); setPage(1); }}
+                                className="pl-10 pr-8 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer"
+                            >
+                                <option value="">All Categories</option>
+                                <option value="all">All Categories</option>
+                                {categories.map(cat => (
+                                    <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
                 )}
             </div>
@@ -225,7 +251,7 @@ const AdminTechnicians = () => {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: -10 }}
-                            className="group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center gap-6"
+                            className={`group bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center gap-6 ${!tech.isOnline && activeTab === 'verified' ? 'grayscale opacity-70 hover:grayscale-0 hover:opacity-100' : ''}`}
                         >
                             {/* Avatar & Basic Info */}
                             <div className="flex items-center gap-5 w-full md:w-auto flex-1">
@@ -243,7 +269,10 @@ const AdminTechnicians = () => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight">{tech.user?.name || 'Partner'}</h4>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-base font-black text-slate-900 dark:text-white leading-tight">{tech.user?.name || 'Partner'}</h4>
+                                        {activeTab === 'verified' && <OnlineBadge isOnline={tech.isOnline} />}
+                                    </div>
 
                                     <div className="flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                                         <div className="flex items-center gap-1">

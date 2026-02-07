@@ -34,8 +34,8 @@ export const BookingProvider = ({ children }) => {
         const statusMap = {
             'PENDING': 'Pending',
             'ASSIGNED': 'Assigned',
-            'ACCEPTED': 'Assigned',
-            'IN_PROGRESS': 'Assigned',
+            'ACCEPTED': 'Assigned', // Tech accepted = Assigned
+            'IN_PROGRESS': 'In Progress',
             'COMPLETED': 'Completed',
             'CANCELLED': 'Canceled'
         };

@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminBookings = () => {
-    const { allBookings, technicians, assignTechnician, cancelBooking, isLoading } = useAdmin();
+    const { allBookings, technicians, assignTechnician, cancelBooking, updateBookingStatus, isLoading } = useAdmin();
     const [selectedTechs, setSelectedTechs] = useState({}); // { bookingId: techId }
     const [actionLoading, setActionLoading] = useState({});
     const [activeTab, setActiveTab] = useState('active'); // 'active' or 'history'
@@ -256,7 +256,21 @@ const AdminBookings = () => {
                                                             >
                                                                 <ExternalLink className="w-4 h-4" />
                                                             </button>
-                                                            {['PENDING', 'ASSIGNED'].includes(booking.status) && (
+                                                            {/* Mark as Completed (Admin Bypass) */}
+                                                            {['IN_PROGRESS', 'ACCEPTED'].includes(booking.status) && (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (window.confirm('Force mark this booking as COMPLETED? This bypasses the Happy Pin check.')) {
+                                                                            await updateBookingStatus(booking._id, 'COMPLETED');
+                                                                        }
+                                                                    }}
+                                                                    className="p-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all"
+                                                                    title="Force Complete"
+                                                                >
+                                                                    <CheckCircle2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                            {['PENDING', 'ASSIGNED', 'ACCEPTED'].includes(booking.status) && (
                                                                 <button
                                                                     onClick={() => handleCancel(booking._id)}
                                                                     className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-all"

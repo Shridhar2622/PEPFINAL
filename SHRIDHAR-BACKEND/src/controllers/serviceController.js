@@ -56,13 +56,9 @@ exports.getAllServices = async (req, res, next) => {
             queryObj.title = { $regex: req.query.search, $options: 'i' };
         }
 
-        // Category feature (Case Insensitive)
+        // Category feature
         if (req.query.category && req.query.category !== 'All') {
-            const cat = req.query.category.trim();
-            // Use strict match but allow case insensitivity. 
-            // If user wants fuzzy, remove ^ and $. For now, strict (trimmed) is best for specific categories.
-            // Actually, to fix "not showing", let's remove strict anchors to handle subtle differences like "Plumbing " vs "Plumbing"
-            queryObj.category = { $regex: cat, $options: 'i' };
+            queryObj.category = req.query.category;
         } else if (req.query.category === 'All') {
             delete queryObj.category;
         }
@@ -151,6 +147,7 @@ exports.getAllServices = async (req, res, next) => {
 
         let query = Service.find(queryObj)
             .select('title category price image headerImage rating reviewCount isActive createdAt description')
+            .populate('category', 'name icon') // Populate Category
             .populate({
                 path: 'technician',
                 select: 'name email profilePhoto isActive location',

@@ -37,9 +37,27 @@ export const AdminProvider = ({ children }) => {
     // Feedbacks and Reviews are not fetched by the new fetchData, so their states are removed.
 
     // Helper to transform backend service to frontend shape
+    // Helper to transform backend service to frontend shape
     const transformService = (service) => {
-        const lowerCat = service.category.toLowerCase();
-        // Map backend category names to frontend IDs if they differ
+        let categoryName = 'General';
+        let categoryId = service.category;
+
+        // Handle populated category object or raw ID/String
+        if (service.category && typeof service.category === 'object' && service.category.name) {
+            categoryName = service.category.name;
+            categoryId = service.category._id || service.category.id;
+        } else if (typeof service.category === 'string') {
+            // Check if it's a legacy name or an ID? 
+            // We assume it might be a name if not hex, but migration should have fixed this.
+            // For safety, if it's a string, we treat it as the name for mapping, 
+            // BUT if it's an ID, we might lose the name.
+            // However, backend populates it now. So it should be an object.
+            categoryName = service.category; // Fallback
+        }
+
+        const lowerCat = categoryName.toLowerCase();
+
+        // Map backend category names to frontend IDs if they differ (for images/icons logic)
         const categoryMap = {
             'plumbing': 'plumber',
             'plumber': 'plumber',
@@ -65,7 +83,7 @@ export const AdminProvider = ({ children }) => {
         const mappedCat = categoryMap[lowerCat] || lowerCat.replace(/\s+/g, '').toLowerCase();
 
         const categoryBtn = initialCategories.find(c => c.id === mappedCat) || {};
-        const isHouseshifting = service.category === 'houseshifting';
+        const isHouseshifting = categoryName.toLowerCase().includes('shift'); // Relaxed check
 
         // Title Cleanup
         let title = service.title || '';
@@ -87,7 +105,9 @@ export const AdminProvider = ({ children }) => {
 
         return {
             ...service,
-            category: mappedCat, // Force normalized category ID
+            category: categoryId, // Use ID for filtering
+            categoryName: categoryName, // Use Name for Display
+            normalizedCategory: mappedCat, // Keep for legacy if needed
             id: service._id || service.id, // Handle Mongo ID
             title,
             price: isHouseshifting ? 199 : service.price,
@@ -127,6 +147,10 @@ export const AdminProvider = ({ children }) => {
                 const ep = endpoints[index];
                 if (result.status === 'fulfilled') {
                     const data = result.value.data;
+                    if (ep.key === 'categories') {
+                        console.log('[DEBUG] AdminContext: Fetched Categories:', data.data?.categories?.length);
+                        // console.log('[DEBUG] Categories:', data.data?.categories);
+                    }
                     if (ep.transform) {
                         ep.setter(ep.transform(data));
                     } else {
@@ -449,6 +473,19 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
+    const updateBookingStatus = async (bookingId, status) => {
+        try {
+            // Using the general booking route which we updated to allow Admin bypass
+            const res = await client.patch(`/bookings/${bookingId}/status`, { status });
+            const updatedBooking = res.data.data.booking;
+            setAllBookings(prev => prev.map(b => b._id === bookingId ? updatedBooking : b));
+            toast.success(`Booking marked as ${status}`);
+        } catch (err) {
+            console.error("Failed to update booking status", err);
+            toast.error(err.response?.data?.message || "Failed to update status");
+        }
+    };
+
     return (
         <AdminContext.Provider value={{
             isAdminAuthenticated,
@@ -481,6 +518,7 @@ export const AdminProvider = ({ children }) => {
             addReason,
             deleteReason,
             assignTechnician,
+            updateBookingStatus,
             cancelBooking,
             refreshData: fetchData
         }}>

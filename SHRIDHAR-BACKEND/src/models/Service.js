@@ -22,7 +22,8 @@ const serviceSchema = new mongoose.Schema({
         min: [0, 'Price must be positive']
     },
     category: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
         required: [true, 'A service must have a category'],
         index: true
     },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../../context/AdminContext';
-import { Plus, Search, Trash2, Edit2, Wrench, X, Check, Image as ImageIcon, DollarSign } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, Wrench, X, Check, Image as ImageIcon, DollarSign, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AdminServices = () => {
@@ -24,12 +24,19 @@ const AdminServices = () => {
         image: ''
     });
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleAddService = async (e) => {
         e.preventDefault();
-        const res = await addService(newService);
-        if (res && res.success) {
-            setIsAddModalOpen(false);
-            setNewService({ title: '', category: '', price: '', description: '', image: '' });
+        setIsSubmitting(true);
+        try {
+            const res = await addService(newService);
+            if (res && res.success) {
+                setIsAddModalOpen(false);
+                setNewService({ title: '', category: '', price: '', description: '', image: '' });
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -105,7 +112,7 @@ const AdminServices = () => {
                                 </div>
                                 <div className="absolute bottom-4 left-4">
                                     <span className="px-3 py-1 bg-black/50 backdrop-blur-md text-white text-xs font-bold rounded-lg uppercase tracking-wider">
-                                        {service.category}
+                                        {service.categoryName || service.category || 'General'}
                                     </span>
                                 </div>
                             </div>
@@ -278,10 +285,20 @@ const AdminServices = () => {
 
                                     <button
                                         type="submit"
-                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                        disabled={isSubmitting}
+                                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xl shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                     >
-                                        <Plus className="w-5 h-5" />
-                                        Create Service
+                                        {isSubmitting ? (
+                                            <>
+                                                <Loader className="w-5 h-5 animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Plus className="w-5 h-5" />
+                                                Create Service
+                                            </>
+                                        )}
                                     </button>
                                 </form>
                             </div>

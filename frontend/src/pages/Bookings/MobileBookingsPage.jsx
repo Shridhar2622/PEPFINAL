@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useBookings } from '../../context/BookingContext';
 import BookingDetailPanel from '../../components/mobile/BookingDetailPanel';
+import ReviewModal from '../../components/ui/ReviewModal';
 
 const MobileBookingsPage = () => {
     const { user, isAuthenticated, setIsChatOpen, isLoading } = useUser();
@@ -16,6 +17,7 @@ const MobileBookingsPage = () => {
     const [activeBookingId, setActiveBookingId] = React.useState(null);
     const [selectedBooking, setSelectedBooking] = React.useState(null);
     const [isDetailOpen, setIsDetailOpen] = React.useState(false);
+    const [isReviewOpen, setIsReviewOpen] = React.useState(false);
     const [focusTechnician, setFocusTechnician] = React.useState(false);
 
     React.useEffect(() => {
@@ -206,7 +208,12 @@ const MobileBookingsPage = () => {
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.4, delay: index * 0.1 }}
-                                    className={`booking-card-item relative rounded-[2rem] shadow-[0_2px_12px_rgb(0,0,0,0.04)] dark:shadow-black/40 ring-1 ring-transparent dark:ring-white/5 transition-all duration-300 transform rotating-border-bookings ${String(activeBookingId) === String(booking.id) ? 'active scale-[1.02] shadow-2xl' : 'scale-100'}`}
+                                    className={`booking-card-item relative rounded-[2rem] shadow-[0_2px_12px_rgb(0,0,0,0.04)] dark:shadow-black/40 ring-1 ring-transparent dark:ring-white/5 transition-all duration-300 transform rotating-border-bookings ${String(activeBookingId) === String(booking.id) ? 'active scale-[1.02] shadow-2xl' : 'scale-100'} cursor-pointer`}
+                                    onClick={() => {
+                                        setSelectedBooking(booking);
+                                        setFocusTechnician(false);
+                                        setIsDetailOpen(true);
+                                    }}
                                 >
                                     <div className="rounded-[2rem] overflow-hidden w-full min-h-[180px] relative z-10 bg-white dark:bg-slate-900 p-6 border border-slate-100 dark:border-slate-800 flex flex-col justify-between gap-4 isolation-isolate">
                                         {/* Service Info */}
@@ -248,7 +255,8 @@ const MobileBookingsPage = () => {
                                         {booking.technician ? (
                                             <div className="space-y-3">
                                                 <div
-                                                    onClick={() => {
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
                                                         setSelectedBooking(booking);
                                                         setFocusTechnician(true); // Set to true when clicking technician info
                                                         setIsDetailOpen(true);
@@ -324,21 +332,24 @@ const MobileBookingsPage = () => {
 
                                             {['Assigned', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status) ? (
                                                 <button
-                                                    onClick={() => updateBookingStatus(booking.id, 'Completed')}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        updateBookingStatus(booking.id, 'Completed');
+                                                    }}
                                                     className="py-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     Mark as Done
                                                 </button>
                                             ) : booking.status === 'Completed' ? (
                                                 <button
-                                                    onClick={() => {
-                                                        // Simple simulation of rating
-                                                        const rating = prompt("Rate your experience (1-5):", "5");
-                                                        if (rating) alert(`Thank you for your ${rating}-star rating!`);
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedBooking(booking);
+                                                        setIsReviewOpen(true);
                                                     }}
                                                     className="py-3 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors flex items-center justify-center gap-2"
                                                 >
-                                                    Rate Service
+                                                    {booking.rating ? 'Update Review' : 'Rate Service'}
                                                 </button>
                                             ) : null}
                                         </div>
@@ -375,6 +386,17 @@ const MobileBookingsPage = () => {
                 onClose={() => setIsDetailOpen(false)}
                 onUpdateStatus={updateBookingStatus}
             />
+
+            {isReviewOpen && selectedBooking && (
+                <ReviewModal
+                    bookingId={selectedBooking.id}
+                    onClose={() => setIsReviewOpen(false)}
+                    onSuccess={() => {
+                        // Refresh logic handled by context or can trigger a toast
+                    }}
+                    initialData={{ rating: selectedBooking.rating, review: selectedBooking.review }}
+                />
+            )}
         </div>
     );
 };

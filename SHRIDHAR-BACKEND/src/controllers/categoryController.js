@@ -4,10 +4,11 @@ const AppError = require('../utils/AppError');
 
 exports.getAllCategories = async (req, res, next) => {
     try {
-        const categories = await Category.find({ isActive: true }).sort('order');
+        const categories = await Category.find({}).sort('order');
+        console.log(`[DEBUG] CategoryController: Found ${categories.length} categories in DB`);
 
         // Find corresponding services for each category
-        const categoryIds = categories.map(cat => cat.name);
+        const categoryIds = categories.map(cat => cat._id);
         const services = await Service.find({
             category: { $in: categoryIds },
             isActive: true
@@ -15,7 +16,7 @@ exports.getAllCategories = async (req, res, next) => {
 
         // Merge service info into categories
         const categoriesWithServices = categories.map(category => {
-            const service = services.find(s => s.category === category.name);
+            const service = services.find(s => s.category.toString() === category._id.toString());
             return {
                 ...category.toObject(),
                 serviceId: service?._id || null,
@@ -50,11 +51,6 @@ exports.createCategory = async (req, res, next) => {
         const newCategory = await Category.create(req.body);
         console.log('[DEBUG] Category Created:', newCategory);
 
-        // Auto-create a corresponding service for this category - REMOVED for decoupled architecture
-        // Categories are now just containers. Services must be created separately and linked to a category.
-
-        console.log('[DEBUG] Category Created without automatic Service:', newCategory);
-
         res.status(201).json({
             status: 'success',
             data: {
@@ -63,7 +59,16 @@ exports.createCategory = async (req, res, next) => {
         });
     } catch (err) {
         console.error('[DEBUG] createCategory Error:', err);
-        next(err);
+        // Fallback if next is somehow undefined (should typically not happen in standard Express)
+        if (typeof next === 'function') {
+            return next(err);
+        } else {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Internal Server Error (next undefined)',
+                error: err.message
+            });
+        }
     }
 };
 

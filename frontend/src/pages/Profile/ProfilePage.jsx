@@ -1,21 +1,26 @@
-import React from 'react';
-import { User, Phone, Mail, MapPin, ChevronRight, LogOut, Settings, CreditCard, Heart, Wrench, Facebook, Twitter, Instagram, Check, MessageSquarePlus, Send, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Phone, Mail, MapPin, ChevronRight, LogOut, CreditCard, Heart, Wrench, Facebook, Twitter, Instagram, Check, MessageSquarePlus, Send } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSound } from '../../context/SoundContext';
 import { useAdmin } from '../../context/AdminContext';
 import { Volume2 } from 'lucide-react';
 import MobileBottomNav from '../../components/mobile/MobileBottomNav';
+import EditProfileModal from '../../components/profile/EditProfileModal';
 
 const ProfilePage = () => {
-  const { user, isAuthenticated, updateProfile, logout, submitFeedback, isLoading } = useUser();
+  const { user, isAuthenticated, updateProfile, logout: userLogout, submitFeedback, isLoading } = useUser();
   const { isSoundEnabled, setIsSoundEnabled } = useSound();
-  const { systemSettings } = useAdmin();
+  const { appSettings } = useAdmin(); // Use appSettings from context
+
+  // Fallback if appSettings is loading or undefined (though context usually provides default)
+  const settings = appSettings || { showWallet: false, showReferralBanner: false };
   const navigate = useNavigate();
-  const [feedbackText, setFeedbackText] = React.useState('');
-  const [feedbackCategory, setFeedbackCategory] = React.useState('Improvements');
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false);
-  const [feedbackSent, setFeedbackSent] = React.useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackCategory, setFeedbackCategory] = useState('Improvements');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSent, setFeedbackSent] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const feedbackCategories = [
     { id: 'Improvements', icon: '✨' },
@@ -33,16 +38,14 @@ const ProfilePage = () => {
 
   if (!isAuthenticated && !user) return null; // Wait for redirect
 
-  const handleEditProfile = () => {
-    const newName = prompt('Enter your name:', user.name);
-    if (newName) {
-      updateProfile({ name: newName });
-    }
+  const handleUpdateProfile = async (data) => {
+    await updateProfile(data);
+    setIsEditModalOpen(false);
   };
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      logout();
+      userLogout(); // Fixed: call userLogout instead of undefined logout
       navigate('/');
     }
   };
@@ -75,7 +78,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
       {/* Background Dots */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px] opacity-10 dark:opacity-5" />
+        <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] bg-size-[40px_40px] opacity-10 dark:opacity-5" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16">
@@ -87,15 +90,15 @@ const ProfilePage = () => {
           <div className="col-span-4 space-y-6">
             {/* Profile Summary Card */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800/50 overflow-hidden">
-              <div className="h-24 bg-gradient-to-r from-rose-500/20 to-orange-500/20"></div>
+              <div className="h-24 bg-linear-to-r from-rose-500/20 to-orange-500/20"></div>
               <div className="px-6 pb-6 text-center">
-<div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-xl mx-auto -mt-12 overflow-hidden bg-white dark:bg-slate-800 relative">
-                  <img 
-                    src={user.image || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'} 
-                    alt={user.name} 
+                <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-xl mx-auto -mt-12 overflow-hidden bg-white dark:bg-slate-800 relative">
+                  <img
+                    src={user.image || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'}
+                    alt={user.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { 
-                      e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100' 
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'
                     }}
                   />
                   <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900">
@@ -103,11 +106,11 @@ const ProfilePage = () => {
                   </div>
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mt-4">{user.name}</h2>
-<p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{user.phone || 'No phone number'}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{user.phone || 'No phone number'}</p>
                 <div className="mt-2 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{user.email || 'No email provided'}</div>
 
                 <button
-                  onClick={handleEditProfile}
+                  onClick={() => setIsEditModalOpen(true)}
                   className="mt-6 w-full py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-100 dark:border-slate-700"
                 >
                   Edit Profile
@@ -154,8 +157,8 @@ const ProfilePage = () => {
           <div className="col-span-8 space-y-8">
             <div className="grid grid-cols-2 gap-8">
               {/* Wallet Card */}
-              {systemSettings.showWallet && (
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden group">
+              {settings.showWallet && (
+                <div className="bg-linear-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden group">
                   <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
                   <div className="relative z-10">
                     <div className="flex justify-between items-center mb-6">
@@ -179,9 +182,9 @@ const ProfilePage = () => {
 
               <div className="space-y-6">
                 {/* Refer & Earn Banner */}
-                {systemSettings.showReferralBanner && (
+                {settings.showReferralBanner && (
                   <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/50 shadow-sm flex items-center gap-5 relative overflow-hidden group">
-                    <div className="w-16 h-16 rounded-[1.5rem] bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 group-hover:rotate-12 transition-transform">
+                    <div className="w-16 h-16 rounded-3xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 group-hover:rotate-12 transition-transform">
                       <Heart className="w-8 h-8 animate-pulse" />
                     </div>
                     <div className="flex-1">
@@ -205,7 +208,7 @@ const ProfilePage = () => {
             {/* Feedback & Requests Section */}
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800/50 p-10">
               <div className="flex items-center gap-6 mb-10">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
+                <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
                   <MessageSquarePlus className="w-8 h-8" />
                 </div>
                 <div>
@@ -242,7 +245,7 @@ const ProfilePage = () => {
                       value={feedbackText}
                       onChange={(e) => setFeedbackText(e.target.value)}
                       placeholder="Tell us how we can improve or request a service..."
-                      className="w-full p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all resize-none min-h-[160px] font-medium"
+                      className="w-full p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-200 focus:ring-4 focus:ring-rose-500/10 outline-none transition-all resize-none min-h-40 font-medium"
                     />
                   </div>
                 </div>
@@ -279,19 +282,19 @@ const ProfilePage = () => {
                 alt="Cover"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent"></div>
             </div>
             <div className="px-6 pb-6 relative">
               <div className="flex flex-col items-center -mt-12 mb-4 gap-4">
                 <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-900 shadow-md overflow-hidden bg-white dark:bg-slate-800 relative">
-                  <img 
-  src={user.image || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'} 
-  alt={user.name} 
-  className="w-full h-full object-cover"
-  onError={(e) => { 
-    e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100' 
-  }}
-/>
+                  <img
+                    src={user.image || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'
+                    }}
+                  />
                   <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900 shadow-lg">
                     <Check className="w-3 h-3 text-white stroke-[4px]" />
                   </div>
@@ -301,7 +304,7 @@ const ProfilePage = () => {
                   <p className="text-gray-500 dark:text-slate-400 text-sm">{user.phone || 'No phone number'}</p>
                 </div>
                 <button
-                  onClick={handleEditProfile}
+                  onClick={() => setIsEditModalOpen(true)}
                   className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 font-medium text-sm hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Edit Profile
@@ -317,13 +320,17 @@ const ProfilePage = () => {
                   <MapPin className="w-5 h-5 text-gray-400 dark:text-slate-500" />
                   <span className="text-gray-600 dark:text-slate-300 text-sm truncate">{user.address || 'No address provided'}</span>
                 </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
+                  <MapPin className="w-5 h-5 text-gray-400 dark:text-slate-500" />
+                  <span className="text-gray-600 dark:text-slate-300 text-sm truncate">{user.pincode || 'No pincode'}</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Admin Controlled: Wallet Card */}
-          {systemSettings.showWallet && (
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-2xl p-6 shadow-lg mb-6 text-white relative overflow-hidden">
+          {settings.showWallet && (
+            <div className="bg-linear-to-br from-slate-900 to-slate-800 dark:from-rose-600 dark:to-rose-700 rounded-2xl p-6 shadow-lg mb-6 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
               <div className="relative z-10">
                 <div className="flex justify-between items-center mb-4">
@@ -346,7 +353,7 @@ const ProfilePage = () => {
           )}
 
           {/* Admin Controlled: Refer & Earn Banner */}
-          {systemSettings.showReferralBanner && (
+          {settings.showReferralBanner && (
             <div className="bg-rose-50 dark:bg-rose-500/10 rounded-2xl p-5 border border-rose-100 dark:border-rose-500/20 mb-6 flex items-center gap-4 relative overflow-hidden">
               <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
                 <Heart className="w-6 h-6 animate-pulse" />
@@ -454,7 +461,7 @@ const ProfilePage = () => {
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Tell us how we can improve or request a service..."
-                  className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-rose-500/20 outline-none transition-all resize-none min-h-[120px]"
+                  className="w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-gray-100 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-rose-500/20 outline-none transition-all resize-none min-h-30"
                 />
               </div>
               <button
@@ -544,6 +551,12 @@ const ProfilePage = () => {
         </div>
 
       </div>
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        user={user}
+        onUpdate={handleUpdateProfile}
+      />
     </div>
   );
 };

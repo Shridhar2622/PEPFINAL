@@ -43,6 +43,10 @@ const technicianProfileSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    reviewCount: {
+        type: Number,
+        default: 0
+    },
     categoryRatings: [{
         category: String,
         avgRating: Number,

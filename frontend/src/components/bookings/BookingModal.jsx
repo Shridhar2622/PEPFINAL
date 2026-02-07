@@ -101,8 +101,26 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
 
 
         try {
-            // If user didn't have an address before, update their profile
-            if (!user?.address && formData.address) {
+            // Enforce Address & Pincode for Booking
+            if (!formData.address) {
+                const newAddress = prompt('Address is mandatory for booking. Please enter your address:');
+                if (!newAddress) {
+                    alert('Booking cannot proceed without an address.');
+                    setIsLoading(false);
+                    return;
+                }
+                // Update local state immediately
+                setFormData(prev => ({ ...prev, address: newAddress, pickupLocation: newAddress }));
+
+                // Update Profile in Background
+                await updateProfile({ address: newAddress });
+
+                // Update user object locally for this booking context if needed (though Context should handle it)
+                formData.address = newAddress;
+                // pickupLocation fallback
+                if (!formData.pickupLocation) formData.pickupLocation = newAddress;
+            } else if (!user?.address && formData.address) {
+                // If user has input address in form but profile doesn't have it, verify and save
                 await updateProfile({ address: formData.address });
             }
 
