@@ -1,0 +1,11 @@
+{
+  "name": "shridhar-root",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm run start --prefix SHRIDHAR-BACKEND",
+    "dev:backend": "npm run dev --prefix SHRIDHAR-BACKEND",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "install:all": "npm install --prefix SHRIDHAR-BACKEND && npm install --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend"
+  }
+}
