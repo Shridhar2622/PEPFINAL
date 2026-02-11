@@ -1,4 +1,17 @@
+const fs = require('fs');
+const path = require('path');
 const AppError = require('../utils/AppError');
+
+const logErrorToFile = (err) => {
+    try {
+        const logFilePath = path.join(__dirname, '../../error.log');
+        const timestamp = new Date().toISOString();
+        const logContent = `[${timestamp}] ${err.name || 'Error'}: ${err.message}\nStack: ${err.stack}\n${'='.repeat(80)}\n`;
+        fs.appendFileSync(logFilePath, logContent);
+    } catch (logErr) {
+        console.error('Failed to write to error.log:', logErr);
+    }
+};
 
 const handleCastErrorDB = err => {
     const message = `Invalid ${err.path}: ${err.value}.`;
@@ -55,6 +68,7 @@ const sendErrorProd = (err, res) => {
 };
 
 module.exports = (err, req, res, next) => {
+    logErrorToFile(err);
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
