@@ -13,8 +13,8 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         if (isAuthenticated && user) {
             // Initialize socket connection
-            // Ensure we connect to the base URL (e.g., http://localhost:5000) not the API path (e.g., .../api/v1)
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            // Ensure we connect to the base URL (e.g., https://api.reservice.in) not the API path (e.g., .../api/v1)
+            const apiUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'https://api.reservice.in';
             const socketUrl = new URL(apiUrl).origin;
 
             const newSocket = io(socketUrl, {

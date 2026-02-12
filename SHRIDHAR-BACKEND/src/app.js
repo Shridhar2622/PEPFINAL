@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === 'production') {
 // CORS - Must be first
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
+    : ['https://reservice.in', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
 
 app.use(cors({
     origin: function (origin, callback) {

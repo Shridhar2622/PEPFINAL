@@ -61,7 +61,7 @@ const LoginPage = () => {
     React.useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/settings/public`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.reservice.in/api/v1'}/settings/public`);
                 const data = await response.json();
                 if (data.status === 'success' && data.data.serviceablePincodes && data.data.serviceablePincodes.length > 0) {
                     setAllowedPincodes(data.data.serviceablePincodes);
@@ -231,7 +231,7 @@ const LoginPage = () => {
         // Note: Google Auth bypasses this frontend pincode check currently. 
         // Logic would need to be added to the callback or Google flow to support pincode if required.
         const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
-        window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/auth/google?role=USER&recaptcha=${tokenToSend}`;
+        window.location.href = `${import.meta.env.VITE_API_URL || 'https://api.reservice.in/api/v1'}/auth/google?role=USER&recaptcha=${tokenToSend}`;
     };
 
 

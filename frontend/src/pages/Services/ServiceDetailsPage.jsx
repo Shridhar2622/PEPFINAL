@@ -5,6 +5,7 @@ import client from '../../api/client';
 import Button from '../../components/common/Button';
 import { useBookings } from '../../context/BookingContext';
 import { useUser } from '../../context/UserContext';
+import { useSocket } from '../../context/SocketContext';
 import BookingModal from '../../components/bookings/BookingModal';
 
 const ServiceDetailsPage = () => {
@@ -12,6 +13,7 @@ const ServiceDetailsPage = () => {
     const navigate = useNavigate();
     const { addBooking } = useBookings();
     const { isAuthenticated } = useUser();
+    const { socket } = useSocket();
 
     const [service, setService] = useState(null);
     const [loading, setLoading] = useState(true);

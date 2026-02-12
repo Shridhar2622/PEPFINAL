@@ -120,7 +120,7 @@ exports.googleAuth = async (req, res, next) => {
     const isCaptchaEnabled = process.env.ENABLE_CAPTCHA !== 'false';
 
     if (isCaptchaEnabled && !recaptchaToken && !isDevelopment) {
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=captcha_required`);
+        return res.redirect(`${process.env.FRONTEND_URL || 'https://reservice.in'}/login?error=captcha_required`);
     }
 
     if (isCaptchaEnabled && recaptchaToken && recaptchaToken !== 'bypass-token') {
@@ -130,11 +130,11 @@ exports.googleAuth = async (req, res, next) => {
             const { success, score } = response.data;
 
             if (!success || (score !== undefined && score < 0.5)) {
-                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=captcha_failed`);
+                return res.redirect(`${process.env.FRONTEND_URL || 'https://reservice.in'}/login?error=captcha_failed`);
             }
         } catch (error) {
             console.error('Google Auth Captcha Error:', error);
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=captcha_error`);
+            return res.redirect(`${process.env.FRONTEND_URL || 'https://reservice.in'}/login?error=captcha_error`);
         }
     }
 
@@ -155,10 +155,10 @@ exports.googleAuth = async (req, res, next) => {
 exports.googleAuthCallback = (req, res, next) => {
     passport.authenticate('google', { session: false }, async (err, user, info) => {
         if (err) {
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+            return res.redirect(`${process.env.FRONTEND_URL || 'https://reservice.in'}/login?error=auth_failed`);
         }
         if (!user) {
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=user_not_found`);
+            return res.redirect(`${process.env.FRONTEND_URL || 'https://reservice.in'}/login?error=user_not_found`);
         }
 
         // Generate token and set cookie
@@ -176,7 +176,7 @@ exports.googleAuthCallback = (req, res, next) => {
         res.cookie('jwt', token, cookieOptions);
 
         // Redirect to frontend based on ROLE
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://reservice.in';
         if (user.role === 'TECHNICIAN') {
             // Fetch fresh user with profile to check status
             const techUser = await User.findById(user._id).populate('technicianProfile');
