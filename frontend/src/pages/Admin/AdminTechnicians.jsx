@@ -114,9 +114,14 @@ const AdminTechnicians = () => {
     }, [allTechnicians, activeTab, searchQuery, selectedCategory, filterOnline]);
 
     // Derived State: Pagination
-    const ITEMS_PER_PAGE = 9;
+    const ITEMS_PER_PAGE = 50; // Increased from 9 to show more initially
     const totalPages = Math.ceil(filteredTechnicians.length / ITEMS_PER_PAGE) || 1;
     const displayTechnicians = filteredTechnicians.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+    // Debug log to help diagnose missing technicians
+    React.useEffect(() => {
+        console.log(`[AdminTechs] ActiveTab: ${activeTab}, Total: ${allTechnicians?.length}, Filtered: ${filteredTechnicians.length}`);
+    }, [activeTab, allTechnicians, filteredTechnicians.length]);
 
     // Reset page when filters change
     React.useEffect(() => {

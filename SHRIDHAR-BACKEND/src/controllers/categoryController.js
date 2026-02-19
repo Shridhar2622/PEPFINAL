@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 exports.getAllCategories = async (req, res, next) => {
     try {
         const categories = await Category.find({}).sort('order');
-        console.log(`[DEBUG] CategoryController: Found ${categories.length} categories in DB`);
+
 
         // Find corresponding services for each category
         const categoryIds = categories.map(cat => cat._id);
@@ -38,7 +38,7 @@ exports.getAllCategories = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
     try {
-        console.log('[DEBUG] createCategory Request Body:', req.body);
+
 
         let image = 'https://images.unsplash.com/photo-1581578731548-c64695cc6958'; // Default
 
@@ -53,7 +53,7 @@ exports.createCategory = async (req, res, next) => {
             image
         });
 
-        console.log('[DEBUG] Category Created:', newCategory);
+
 
         // Socket Emission for Admin
         try {

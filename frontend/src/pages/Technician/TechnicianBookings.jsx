@@ -107,38 +107,38 @@ const TechnicianBookings = () => {
     };
 
     const tabs = [
-        { id: 'requests', label: 'New Requests', count: counts.requests, icon: Bell },
-        { id: 'active', label: 'In Progress', count: counts.active, icon: Play },
-        { id: 'history', label: 'Completed', count: counts.history, icon: CheckCircle }
+        { id: 'requests', label: 'New', count: counts.requests, icon: Bell },
+        { id: 'active', label: 'Active', count: counts.active, icon: Play },
+        { id: 'history', label: 'Done', count: counts.history, icon: CheckCircle }
     ];
 
     return (
-        <div className="space-y-6 md:space-y-10">
+        <div className="space-y-4 md:space-y-10">
             {/* Header Section */}
-            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+            <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4 md:gap-6">
                 <div>
-                    <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
+                    <h1 className="text-xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
                         Expert Workspace
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 font-medium max-w-md mt-1">
-                        High-performance dashboard to manage your service availability and active operations.
+                    <p className="text-slate-400 dark:text-slate-400 font-medium max-w-md mt-1 text-xs md:text-base">
+                        Manage your service availability and active operations.
                     </p>
                 </div>
 
-                <div className="flex bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm self-start xl:self-auto overflow-x-auto no-scrollbar max-w-full">
+                <div className="grid grid-cols-3 md:flex bg-white dark:bg-slate-900 p-1 md:p-1.5 rounded-xl md:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm w-full md:w-auto self-stretch md:self-auto overflow-hidden">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all duration-300 uppercase tracking-wider whitespace-nowrap ${activeTab === tab.id
+                            className={`flex items-center justify-center gap-1.5 md:gap-2 px-2 md:px-6 py-2.5 md:py-3 rounded-lg md:rounded-xl text-[8px] md:text-xs font-black transition-all duration-300 uppercase tracking-wider whitespace-nowrap ${activeTab === tab.id
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none'
                                 : 'text-slate-400 hover:text-indigo-600'
                                 }`}
                         >
-                            <tab.icon className="w-4 h-4" />
-                            {tab.label}
+                            <tab.icon className="w-3 md:w-4 h-3 md:h-4" />
+                            <span>{tab.label}</span>
                             {tab.count > 0 && (
-                                <span className={`ml-1 flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                <span className={`ml-0.5 flex items-center justify-center min-w-4 md:min-w-5 h-4 md:h-5 px-1 md:px-1.5 rounded-full text-[8px] md:text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
                                     {tab.count}
                                 </span>
                             )}
@@ -149,11 +149,13 @@ const TechnicianBookings = () => {
 
             {/* List Section */}
             <div className="grid grid-cols-1 gap-6 md:gap-8 pb-12">
-                <AnimatePresence mode="popLayout text-left">
+                <AnimatePresence mode="wait">
                     {filteredJobs.length === 0 ? (
                         <motion.div
+                            key="empty-state"
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
                             className="bg-white dark:bg-slate-900 rounded-6xl py-24 px-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800"
                         >
                             <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-4xl flex items-center justify-center mx-auto mb-6">
@@ -174,56 +176,55 @@ const TechnicianBookings = () => {
                         filteredJobs.map(booking => (
                             <motion.div
                                 key={booking._id}
-                                layout
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800 group hover:shadow-2xl hover:shadow-indigo-500/5 transition-all overflow-hidden relative active:scale-[0.99]"
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white dark:bg-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-4 md:p-10 shadow-sm border border-slate-100 dark:border-slate-800 group hover:shadow-2xl hover:shadow-indigo-500/5 transition-all overflow-hidden relative active:scale-[0.99] select-none"
                             >
-                                <div className="flex flex-col lg:flex-row justify-between gap-8 md:gap-12 relative z-10">
+                                <div className="flex flex-col lg:flex-row justify-between gap-6 md:gap-12 relative z-10">
                                     {/* Left: Metadata */}
-                                    <div className="flex-1 space-y-8">
-                                        <div className="flex flex-wrap items-center gap-4">
-                                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 shadow-inner">
-                                                <ImageIcon className="w-6 h-6 md:w-8 md:h-8 text-indigo-600" />
+                                    <div className="flex-1 space-y-6 md:space-y-8">
+                                        <div className="flex flex-wrap items-center gap-3 md:gap-4">
+                                            <div className="w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0 shadow-inner">
+                                                <ImageIcon className="w-5 h-5 md:w-8 md:h-8 text-indigo-600" />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1.5">
+                                                <h3 className="text-base md:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none mb-1 md:mb-1.5">
                                                     {booking.category?.name || 'Service Request'}
                                                 </h3>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 dark:border-slate-800 pr-3">#{booking._id.slice(-8)}</span>
+                                                <div className="flex items-center gap-1.5 md:gap-3">
+                                                    <span className="text-[7px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-200 dark:border-slate-800 pr-1.5 md:pr-3">#{booking._id.slice(-8)}</span>
                                                     {getStatusBadge(booking.status)}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <User className="w-3 h-3" /> Customer Info
+                                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-3 md:gap-6">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <User className="w-2.5 h-2.5" /> Customer
                                                 </p>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">{booking.customer?.name}</p>
-                                                <p className="text-xs text-slate-400 font-bold tracking-tighter uppercase">{booking.customer?.phone}</p>
+                                                <p className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-200 truncate">{booking.customer?.name}</p>
+                                                <p className="text-[9px] md:text-xs text-slate-400 font-bold tracking-tighter uppercase">{booking.customer?.phone}</p>
                                             </div>
 
-                                            <div className="space-y-1">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <Clock className="w-3 h-3" /> Scheduled Date
+                                            <div className="space-y-0.5">
+                                                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <Clock className="w-2.5 h-2.5" /> Scheduled
                                                 </p>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200">
+                                                <p className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-200">
                                                     {format(new Date(booking.scheduledAt), 'MMM do')}
                                                 </p>
-                                                <p className="text-xs text-indigo-500 font-bold uppercase tracking-widest">Awaiting Attendance</p>
                                             </div>
 
-                                            <div className="space-y-1 md:col-span-2 lg:col-span-1">
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                                                    <MapPin className="w-3 h-3" /> Precise Location
+                                            <div className="space-y-0.5 col-span-2 lg:col-span-1">
+                                                <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <MapPin className="w-2.5 h-2.5" /> Location
                                                 </p>
-                                                <p className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-60">
+                                                <p className="font-bold text-sm md:text-base text-slate-800 dark:text-slate-200 truncate pr-4">
                                                     {booking.location?.address || 'Standard Location'}
                                                 </p>
-                                                <button className="text-[10px] font-black text-indigo-600 uppercase hover:underline">Get Directions</button>
+                                                <button className="text-[8px] md:text-[10px] font-black text-indigo-600 uppercase hover:underline">Get Directions</button>
                                             </div>
                                         </div>
 
@@ -237,10 +238,10 @@ const TechnicianBookings = () => {
                                     </div>
 
                                     {/* Right: Revenue & Actions */}
-                                    <div className="flex flex-col justify-between items-start lg:items-end gap-8 min-w-50">
+                                    <div className="flex flex-col justify-between items-start lg:items-end gap-5 md:gap-8 min-w-full lg:min-w-50">
                                         <div className="text-left lg:text-right">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Service Revenue</p>
-                                            <p className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">₹{booking.finalAmount || booking.price}</p>
+                                            <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Service Revenue</p>
+                                            <p className="text-2xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">₹{booking.finalAmount || booking.price}</p>
                                         </div>
 
                                         <div className="w-full space-y-3">
@@ -317,15 +318,15 @@ const TechnicianBookings = () => {
                                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[3rem] p-8 md:p-12 shadow-2xl border border-indigo-50 dark:border-slate-800"
+                                className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[2rem] md:rounded-[3rem] p-5 md:p-12 shadow-2xl border border-indigo-50 dark:border-slate-800"
                             >
-                                <div className="flex justify-between items-start mb-10">
+                                <div className="flex justify-between items-start mb-6 md:mb-10">
                                     <div>
-                                        <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase mb-1">Finish Order</h2>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {currentBooking?._id}</p>
+                                        <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase mb-1">Finish Order</h2>
+                                        <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {currentBooking?._id}</p>
                                     </div>
-                                    <button onClick={() => setShowCompletionModal(false)} className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-all">
-                                        <XCircle className="w-6 h-6" />
+                                    <button onClick={() => setShowCompletionModal(false)} className="p-2 md:p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-all">
+                                        <XCircle className="w-5 h-5 md:w-6 h-6" />
                                     </button>
                                 </div>
 
@@ -389,7 +390,7 @@ const TechnicianBookings = () => {
                                     )}
 
                                     <div className="space-y-4">
-                                        <label className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] px-1 text-center block">
+                                        <label className="text-xs md:text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] px-1 text-center block">
                                             Happy Pin (Verify with Customer)
                                         </label>
                                         <div className="relative group">
@@ -399,7 +400,7 @@ const TechnicianBookings = () => {
                                                 maxLength={6}
                                                 value={completionForm.securityPin}
                                                 onChange={(e) => setCompletionForm(prev => ({ ...prev, securityPin: e.target.value }))}
-                                                className="w-full p-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-[2rem] border-2 border-indigo-100 dark:border-indigo-900/40 text-center text-5xl font-black tracking-[0.5em] text-indigo-600 dark:text-indigo-500 focus:border-indigo-500 focus:ring-8 focus:ring-indigo-500/10 outline-none transition-all placeholder:opacity-20"
+                                                className="w-full p-4 md:p-8 bg-indigo-50 dark:bg-indigo-900/20 rounded-[1.2rem] md:rounded-[2rem] border-2 border-indigo-100 dark:border-indigo-900/40 text-center text-2xl md:text-5xl font-black tracking-[0.2em] md:tracking-[0.5em] text-indigo-600 dark:text-indigo-500 focus:border-indigo-500 focus:ring-8 focus:ring-indigo-500/10 outline-none transition-all placeholder:opacity-20"
                                                 placeholder="000000"
                                             />
                                         </div>
@@ -407,7 +408,7 @@ const TechnicianBookings = () => {
 
                                     <div className="space-y-4">
                                         <div
-                                            className="relative border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem] p-10 hover:border-indigo-400 transition-all group overflow-hidden"
+                                            className="relative border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] p-6 md:p-10 hover:border-indigo-400 transition-all group overflow-hidden"
                                             onDragOver={(e) => e.preventDefault()}
                                             onDrop={(e) => {
                                                 e.preventDefault();
@@ -437,13 +438,13 @@ const TechnicianBookings = () => {
                                                     }
                                                 }}
                                             />
-                                            <div className="flex flex-col items-center gap-4">
-                                                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
-                                                    <ImageIcon className="w-8 h-8" />
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl md:rounded-3xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                    <ImageIcon className="w-6 h-6 md:w-8 md:h-8" />
                                                 </div>
                                                 <div className="text-center">
-                                                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-tighter">Upload Work Photos</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Tap or drop images here</p>
+                                                    <p className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-tighter">Upload Work Photos</p>
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Tap here to select images</p>
                                                 </div>
                                             </div>
                                         </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useAdmin } from '../context/AdminContext';
-import { Shield, Layout, Wallet, Share2, LogOut, Settings, Wrench, Users, Clock, User as UserIcon, Tag, MessageSquarePlus, Sun, Moon, Briefcase, Image as ImageIcon, Loader } from 'lucide-react';
+import { Shield, Layout, Wallet, Share2, LogOut, Settings, Wrench, Users, Clock, User as UserIcon, Tag, MessageSquarePlus, Sun, Moon, Briefcase, Image as ImageIcon, Loader, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../context/ThemeContext';
 
@@ -46,6 +46,7 @@ const AdminLayout = () => {
 
     const menuItems = [
         { id: 'overview', path: '/admin/dashboard', label: 'Dashboard', icon: Layout },
+        { id: 'notifications', path: '/admin/notifications', label: 'Notifications', icon: Bell },
         { id: 'bookings', path: '/admin/bookings', label: 'Bookings', icon: Clock },
         { id: 'roles', path: '/admin/roles', label: 'Role Manager', icon: Briefcase },
         { id: 'experts', path: '/admin/experts', label: 'Technicians', icon: Users },

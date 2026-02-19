@@ -185,7 +185,7 @@ const LoginPage = () => {
             // Pincode Validation - Robus check
             const cleanPincode = pincode.trim();
             // Ensure we compare strings to strings
-            console.log('Comparing:', { cleanPincode, allowedPincodes });
+
             const isAllowed = allowedPincodes.some(p => p.toString() === cleanPincode);
 
             if (!isAllowed) {

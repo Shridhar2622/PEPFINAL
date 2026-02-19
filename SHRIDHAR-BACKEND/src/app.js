@@ -17,9 +17,8 @@ require('./config/passport'); // Passport Config
 const app = express();
 
 // Trust Proxy for Render/Heroku (Required for Secure Cookies in Prod)
-if (process.env.NODE_ENV === 'production') {
-    app.enable('trust proxy');
-}
+// Trust Proxy for Render/Heroku (Required for Secure Cookies in Prod)
+app.enable('trust proxy');
 
 // CORS - Must be first
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -36,7 +35,16 @@ app.use(cors({
             return callback(null, true);
         }
 
-        if (allowedOrigins.indexOf(origin) === -1) {
+        // Allow any local network IP (192.168.x.x, 10.x.x.x, 172.16.x.x) for mobile testing
+        // This is a temporary fix for local testing in "production" mode
+        if (origin.match(/^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/)) {
+            return callback(null, true);
+        }
+
+        // Allow GitHub Codespaces preview domains
+        const isCodespace = origin.endsWith('.app.github.dev');
+        if (allowedOrigins.indexOf(origin) === -1 && !isCodespace) {
+            console.log('BLOCKED CORS ORIGIN:', origin); // Log blocked origin for debugging
             return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
         }
         return callback(null, true);
@@ -52,19 +60,21 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// Passport Init
-app.use(passport.initialize());
-
 // Development logging
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Limit requests from same API
-app.use('/api', globalLimiter);
+// Body parsers - Must come before Passport and Limiter for accurate data access
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+
+// Passport Init - Following body/cookie parsing
+app.use(passport.initialize());
+
+// Limit requests from same API
+app.use('/api', globalLimiter);
 
 // Data sanitization against XSS attacks
 // Data sanitization against XSS attacks

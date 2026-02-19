@@ -22,7 +22,7 @@ exports.createBooking = async (req, res, next) => {
         let finalServiceId = serviceId;
 
         // 1. Resolve Service and Category
-        console.log('[DEBUG] createBooking Payload:', req.body);
+
         if (serviceId) {
             const serviceDoc = await Service.findById(serviceId);
             if (!serviceDoc) {
@@ -61,7 +61,7 @@ exports.createBooking = async (req, res, next) => {
             }
         }
 
-        console.log('[DEBUG] Resolved IDs:', { finalServiceId, finalCategoryId });
+
 
         if (!finalCategoryId) {
             return next(new AppError('A valid category or service must be provided (Category Resolution Failed)', 400));
@@ -268,6 +268,8 @@ exports.updateBookingStatus = async (req, res, next) => {
             }
             booking.securityPin = undefined; // Nullify pin on cancel
             booking.status = 'CANCELLED'; // EXPLICITLY SET STATUS FOR PERSISTENCE
+            booking.cancelledBy = req.user.role;
+            booking.cancelledAt = Date.now();
         }
         else if (['ACCEPTED', 'REJECTED'].includes(status)) {
             // Only Technician can accept/reject (Admin generally shouldn't interfere here unless re-assigning, which is a different flow)
@@ -287,7 +289,7 @@ exports.updateBookingStatus = async (req, res, next) => {
             });
 
             // Notify Admin
-            console.log(`[INFO] Technician ${req.user.name} ${status.toLowerCase()} booking ${booking._id}`);
+
 
             // Logic for status transition
             if (status === 'REJECTED') {
@@ -315,10 +317,7 @@ exports.updateBookingStatus = async (req, res, next) => {
             if (status === 'COMPLETED') {
                 const { securityPin, finalAmount, extraReason, technicianNote } = req.body;
 
-                console.log('[DEBUG] Completion Request:', {
-                    body: req.body,
-                    filesCount: req.files?.length || 0
-                });
+
 
                 // 1. Verify Happy Pin (Required for Technician, OR if Pin is provided by Admin)
                 const isPinRequired = !isAdmin || (isAdmin && securityPin);
@@ -394,7 +393,9 @@ exports.updateBookingStatus = async (req, res, next) => {
             technicianNote: booking.technicianNote,
             completedAt: booking.completedAt,
             extraReason: booking.extraReason,
-            partImages: booking.partImages
+            partImages: booking.partImages,
+            cancelledBy: booking.cancelledBy,
+            cancelledAt: booking.cancelledAt
         };
 
         const updatedBooking = await Booking.findByIdAndUpdate(
@@ -403,7 +404,7 @@ exports.updateBookingStatus = async (req, res, next) => {
             { new: true, runValidators: false }
         ).populate('category customer technician review');
 
-        console.log(`[DEBUG] Status Update Success: ${updatedBooking._id} (${status})`);
+
 
         // Socket Emission for Admin & Technician
         try {

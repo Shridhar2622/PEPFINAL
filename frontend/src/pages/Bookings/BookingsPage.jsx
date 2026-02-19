@@ -11,13 +11,13 @@ import MobileBookingsPage from './MobileBookingsPage';
 import BookingDetailPanel from '../../components/mobile/BookingDetailPanel';
 import ReviewModal from '../../components/ui/ReviewModal';
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, cancelledBy }) => {
     const styles = {
         Pending: 'bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-500/20',
         Assigned: 'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-yellow-500/20',
         'In Progress': 'bg-indigo-100 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20',
         Completed: 'bg-green-100 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-500/20',
-        Canceled: 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/20',
+        Canceled: 'bg-rose-600 text-white border-rose-700 shadow-sm',
     };
 
     const icons = {
@@ -33,7 +33,7 @@ const StatusBadge = ({ status }) => {
     return (
         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${styles[status] || 'bg-slate-100 text-slate-700'}`}>
             <Icon className="w-3.5 h-3.5" />
-            {status}
+            {status === 'Canceled' || status === 'Cancelled' ? 'Cancelled' : status}
         </span>
     );
 };
@@ -42,7 +42,7 @@ const BookingCard = ({ booking, cancelBooking, onViewDetails, onReview }) => {
     return (
         <div
             onClick={() => onViewDetails(booking)}
-            className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group cursor-pointer"
+            className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all group cursor-pointer ${booking.status === 'Canceled' ? 'opacity-75 grayscale-[0.3]' : ''}`}
         >
             <div className="flex flex-col sm:flex-row gap-5">
                 {/* Service Image */}
@@ -74,7 +74,7 @@ const BookingCard = ({ booking, cancelBooking, onViewDetails, onReview }) => {
                                     </div>
                                 </div>
                             </div>
-                            <StatusBadge status={booking.status} />
+                            <StatusBadge status={booking.status} cancelledBy={booking.cancelledBy} />
                         </div>
 
                         {/* Technician Info (if assigned) */}
@@ -102,6 +102,20 @@ const BookingCard = ({ booking, cancelBooking, onViewDetails, onReview }) => {
                                 <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                 <span className="text-xs font-bold text-blue-700 dark:text-blue-300">Happy Pin:</span>
                                 <span className="text-sm font-black text-blue-800 dark:text-blue-100 tracking-wider font-mono">{booking.securityPin}</span>
+                            </div>
+                        )}
+                        {/* Cancellation Message */}
+                        {booking.status === 'Canceled' && (
+                            <div className="mt-4 flex flex-col gap-2 p-4 bg-rose-50/50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-800/50 w-full sm:w-fit">
+                                <div className="flex items-center gap-2">
+                                    <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                                    <p className="text-sm font-bold text-rose-900 dark:text-rose-100">
+                                        Cancelled
+                                    </p>
+                                </div>
+                                <p className="text-xs font-medium text-rose-600 dark:text-rose-400 pl-6">
+                                    Please give us one more chance.
+                                </p>
                             </div>
                         )}
                     </div>
@@ -244,12 +258,17 @@ const BookingsPage = () => {
     if (!user) return null;
 
     const filteredBookings = bookings.filter(b => {
-        if (activeTab === 'History') return ['Completed', 'Canceled'].includes(b.status);
+        if (activeTab === 'History' || activeTab === 'Completed') return ['Completed', 'Canceled'].includes(b.status);
         if (activeTab === 'Pending') return b.status === 'Pending';
         if (activeTab === 'Assigned') return ['Assigned', 'In Progress'].includes(b.status);
-        if (activeTab === 'Completed') return b.status === 'Completed';
         return true;
     });
+
+    const counts = {
+        Pending: bookings.filter(b => b.status === 'Pending').length,
+        Assigned: bookings.filter(b => ['Assigned', 'In Progress'].includes(b.status)).length,
+        Completed: bookings.filter(b => ['Completed', 'Canceled'].includes(b.status)).length,
+    };
 
     return (
         <>
@@ -300,12 +319,18 @@ const BookingsPage = () => {
                                         <button
                                             key={tab}
                                             onClick={() => setActiveTab(tab)}
-                                            className={`flex-1 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab
-                                                ? 'border-blue-600 text-blue-600 bg-blue-50/50 dark:bg-blue-500/10'
+                                            className={`flex-1 py-4 text-sm font-bold border-b-2 transition-all flex items-center justify-center gap-3 ${activeTab === tab
+                                                ? 'border-blue-600 text-blue-600 bg-blue-50/30 dark:bg-blue-500/10'
                                                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                                                 }`}
                                         >
                                             {tab}
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                                                }`}>
+                                                {counts[tab]}
+                                            </span>
                                         </button>
                                     ))}
                                 </div>

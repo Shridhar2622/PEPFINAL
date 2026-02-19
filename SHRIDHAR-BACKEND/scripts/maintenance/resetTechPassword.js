@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
-const User = require(path.join(__dirname, 'src', 'models', 'User'));
+const User = require(path.join(__dirname, '..', '..', 'src', 'models', 'User'));
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 
 const resetPassword = async () => {
     try {

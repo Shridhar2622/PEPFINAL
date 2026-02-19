@@ -21,7 +21,15 @@ const BookingDetailPanel = ({ booking, isOpen, onClose, onHelp, onUpdateStatus, 
 
     if (!booking) return null;
 
-    const steps = [
+    const steps = booking.status === 'Canceled' ? [
+        { label: 'Requested', time: booking.date, completed: true },
+        {
+            label: 'Cancelled',
+            time: booking.cancelledAt ? new Date(booking.cancelledAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+            completed: true,
+            isCancelled: true
+        }
+    ] : [
         { label: 'Requested', time: '10:30 AM', completed: true },
         { label: 'Technician Assigned', time: '10:45 AM', completed: booking.status !== 'Pending' },
         { label: 'Started', time: '--:--', completed: booking.status === 'Completed' },
@@ -79,11 +87,21 @@ const BookingDetailPanel = ({ booking, isOpen, onClose, onHelp, onUpdateStatus, 
                                     <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-100 dark:bg-slate-800" />
                                     {steps.map((step, i) => (
                                         <div key={i} className="flex gap-6 relative">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 ${step.completed ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-300'}`}>
-                                                {step.completed ? <ShieldCheck className="w-5 h-5" /> : <Clock className="w-4 h-4" />}
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center z-10 
+                                                ${step.isCancelled ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20' :
+                                                    step.completed ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' :
+                                                        'bg-slate-100 dark:bg-slate-800 text-slate-300'}`}>
+                                                {step.isCancelled ? <X className="w-5 h-5" /> :
+                                                    step.completed ? <ShieldCheck className="w-5 h-5" /> :
+                                                        <Clock className="w-4 h-4" />}
                                             </div>
                                             <div className="flex-1">
-                                                <p className={`text-sm font-bold ${step.completed ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-600'}`}>{step.label}</p>
+                                                <p className={`text-sm font-bold 
+                                                    ${step.isCancelled ? 'text-rose-600 dark:text-rose-400' :
+                                                        step.completed ? 'text-slate-900 dark:text-white' :
+                                                            'text-slate-400 dark:text-slate-600'}`}>
+                                                    {step.label}
+                                                </p>
                                                 <p className="text-[10px] text-slate-400 dark:text-slate-500">{step.time}</p>
                                             </div>
                                         </div>

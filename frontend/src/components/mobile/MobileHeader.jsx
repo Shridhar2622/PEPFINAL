@@ -1,12 +1,14 @@
-import { MapPin, Moon, Sun } from 'lucide-react';
+import { MapPin, Moon, Sun, Bell } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useNotifications } from '../../context/NotificationContext';
 
 const MobileHeader = ({ className }) => {
   const { user, updateProfile } = useUser();
   const { theme, toggleTheme } = useTheme();
+  const { unreadCount } = useNotifications();
   const [isLocating, setIsLocating] = useState(false);
   const [displayAddress, setDisplayAddress] = useState(() => {
     // Laptop Mode Logic: Prioritize real-time coordinate city over profile default
@@ -102,6 +104,12 @@ const MobileHeader = ({ className }) => {
 
         {/* Actions - Theme Toggle & Profile */}
         <div className="flex items-center gap-3">
+          <Link to="/notifications" className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 active:scale-90 transition-all">
+            <Bell className="w-5 h-5 text-slate-700 dark:text-slate-300" />
+            {unreadCount > 0 && (
+              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
+            )}
+          </Link>
           <button
             onClick={toggleTheme}
             className="relative w-11 h-11 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200/50 dark:border-white/10 shadow-sm active:scale-90 transition-all outline-none overflow-hidden group"

@@ -71,7 +71,7 @@ class PaymentService {
                 transaction
             };
         } else {
-            // TODO: Integrate Real Payment Gateway here
+
             // For now, fail if enabled but no gateway
             transaction.status = 'FAILED';
             await transaction.save();

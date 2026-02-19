@@ -39,6 +39,9 @@ import AdminCategories from './pages/Admin/AdminCategories';
 import AdminRolesPanel from './pages/Admin/AdminRolesPanel';
 import AdminLoginPage from './pages/Admin/AdminLoginPage';
 import AdminHeroSettings from './pages/Admin/AdminHeroSettings';
+import AdminNotifications from './pages/Admin/AdminNotifications';
+import UserNotifications from './pages/Notifications/UserNotifications';
+import TechnicianNotifications from './pages/Notifications/TechnicianNotifications';
 import CareersPage from './pages/Static/CareersPage';
 import ContactPage from './pages/Static/ContactPage';
 import AboutUsPage from './pages/Static/AboutUsPage';
@@ -124,19 +127,13 @@ function AnimatedRoutes() {
       className="bg-transparent dark:bg-slate-950 transition-colors duration-300"
       style={isMobile ? { position: 'relative', minHeight: '100vh', overflowX: 'hidden' } : {}}
     >
-      <AnimatePresence mode="sync" initial={false}>
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={isMobile ? location.pathname : 'desktop-view'}
+          key={location.pathname}
           initial={false}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.1 }}
-          className={isMobile ? "mobile-page-transition" : ""}
-          style={isMobile ? {
-            position: 'relative',
-            width: '100%',
-            minHeight: '100vh',
-            zIndex: 0
-          } : {}}
+          transition={{ duration: 0.15 }}
+          className={isMobile ? "min-h-screen w-full relative" : "w-full"}
         >
           {appType === 'USER' && <UserRoutes />}
           {appType === 'TECH' && <TechnicianRoutes />}
@@ -157,6 +154,7 @@ function AnimatedRoutes() {
                 <Route path="careers" element={<CareersPage />} />
                 <Route path="contact" element={<ContactPage />} />
                 <Route path="about" element={<AboutUsPage />} />
+                <Route path="notifications" element={<UserNotifications />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -174,6 +172,11 @@ function AnimatedRoutes() {
               <Route path="/technician/dashboard" element={
                 <ProtectedRoute allowedRoles={['TECHNICIAN']}>
                   <TechnicianDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/technician/notifications" element={
+                <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                  <TechnicianNotifications />
                 </ProtectedRoute>
               } />
 
@@ -196,6 +199,7 @@ function AnimatedRoutes() {
                 <Route path="categories" element={<AdminCategories />} />
                 <Route path="roles" element={<AdminRolesPanel />} />
                 <Route path="hero" element={<AdminHeroSettings />} />
+                <Route path="notifications" element={<AdminNotifications />} />
               </Route>
 
               {/* 404 Route */}
@@ -211,47 +215,7 @@ function AnimatedRoutes() {
 }
 
 
-const NotificationListener = () => {
-  const { socket } = useSocket();
-  const queryClient = useQueryClient();
-  const { playNotificationSound } = useSound();
-
-  React.useEffect(() => {
-    if (!socket) return;
-
-    const handleNotification = (data) => {
-      // Play sound
-      playNotificationSound();
-
-      toast(data.message || 'New Notification', {
-        icon: '🔔',
-        style: {
-          borderRadius: '1rem',
-          background: '#333',
-          color: '#fff',
-        },
-      });
-    };
-
-    const handleServiceUpdate = () => {
-      // Invalidate all service related queries to show fresh ratings
-      queryClient.invalidateQueries(['services']);
-      queryClient.invalidateQueries(['service']);
-    };
-
-    socket.on('notification', handleNotification);
-    socket.on('service:updated', handleServiceUpdate);
-    socket.on('review:created', handleServiceUpdate);
-
-    return () => {
-      socket.off('notification', handleNotification);
-      socket.off('service:updated', handleServiceUpdate);
-      socket.off('review:created', handleServiceUpdate);
-    };
-  }, [socket, queryClient, playNotificationSound]);
-
-  return null;
-};
+import { NotificationProvider } from './context/NotificationContext';
 
 function App() {
   return (
@@ -260,20 +224,21 @@ function App() {
         <UserProvider>
           <SoundProvider>
             <SocketProvider>
-              <NotificationListener />
-              <BookingProvider>
-                <AdminProvider>
-                  <TechnicianProvider>
-                    <ThemeProvider>
-                      <Router>
-                        <ScrollToTop />
-                        <AnimatedRoutes />
-                        <Toaster position="top-center" />
-                      </Router>
-                    </ThemeProvider>
-                  </TechnicianProvider>
-                </AdminProvider>
-              </BookingProvider>
+              <NotificationProvider>
+                <BookingProvider>
+                  <AdminProvider>
+                    <TechnicianProvider>
+                      <ThemeProvider>
+                        <Router>
+                          <ScrollToTop />
+                          <AnimatedRoutes />
+                          <Toaster position="top-center" />
+                        </Router>
+                      </ThemeProvider>
+                    </TechnicianProvider>
+                  </AdminProvider>
+                </BookingProvider>
+              </NotificationProvider>
             </SocketProvider>
           </SoundProvider>
         </UserProvider>

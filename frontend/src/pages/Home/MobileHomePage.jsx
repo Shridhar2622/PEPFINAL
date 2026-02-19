@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, ArrowRight, Star, Clock, Sparkles } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Star, Clock, Sparkles, Hotel, Car } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // import { useAdmin } from '../../context/AdminContext';
@@ -9,6 +9,8 @@ import MobileBottomNav from '../../components/mobile/MobileBottomNav';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 
+import ComingSoonModal from '../../components/common/ComingSoonModal';
+
 const MobileHomePage = ({ services = [], categories = [] }) => {
   const [heroSlides, setHeroSlides] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -17,6 +19,8 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
   const [rotationIndex, setRotationIndex] = useState(0);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('All');
   const navigate = useNavigate();
+
+  const [comingSoonTitle, setComingSoonTitle] = useState(null);
 
   // Fetch Hero Slides from Backend
   useEffect(() => {
@@ -75,30 +79,6 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
   };
 
   const [activeCardId, setActiveCardId] = useState(null);
-
-  // Intersection Observer for Zoom Effect
-  const observerRef = useRef(null);
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver((entries) => {
-      // Home-Specific: Elegant center capture for tall cards
-      const bestEntry = entries
-        .filter(e => e.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-      if (bestEntry && bestEntry.intersectionRatio > 0.4) {
-        const newId = bestEntry.target.dataset.id; // Keep as string
-        setActiveCardId(prev => (prev === newId ? prev : newId));
-      }
-    }, {
-      threshold: [0.4, 0.6], // Only trigger when significantly visible
-      rootMargin: "-20% 0px -20% 0px" // Focus area is the vertical center 60% of screen
-    });
-
-    const cards = document.querySelectorAll('.zoom-card');
-    cards.forEach(card => observerRef.current.observe(card));
-
-    return () => observerRef.current.disconnect();
-  }, [services]);
 
   const handleHeroClick = (slide) => {
     if (slide.serviceId) {
@@ -236,6 +216,90 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
           </motion.div>
         </section>
 
+        {/* Other Services Section (New) */}
+        <section className="px-5 mt-8">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-4 px-1">
+            Other Services
+          </h3>
+          <div className="flex flex-col gap-4">
+            {/* Reservice Hotels Card */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setComingSoonTitle("Reservice Hotels")}
+              className="relative bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-800 overflow-hidden cursor-pointer group"
+            >
+              {/* Background Gradient & Pattern */}
+              <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 opacity-50" />
+              <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hoover:scale-110 transition-transform duration-300">
+                  <Hotel className="w-7 h-7" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-bold text-lg text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    Reservice Hotels
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Premium stays & accommodation</p>
+                </div>
+
+                {/* Premium Glassmorphic Badge */}
+                <div className="ml-auto bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-rose-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider relative z-10">Soon</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Reservice Go Cabs Card */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setComingSoonTitle("Reservice Go Cabs & Transport")}
+              className="relative bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-800 overflow-hidden cursor-pointer group"
+            >
+              {/* Background Gradient & Pattern */}
+              <div className="absolute inset-0 bg-linear-to-r from-amber-50 to-white dark:from-slate-800 dark:to-slate-900 opacity-50" />
+              <div className="absolute right-0 top-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+              {/* Animation: Moving Car */}
+              <motion.div
+                initial={{ x: -50 }}
+                animate={{ x: 400 }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-2 left-0 z-0"
+              >
+                <Car className="w-16 h-16 text-amber-500/20 dark:text-amber-500/30 filter drop-shadow-sm" />
+              </motion.div>
+
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-14 h-14 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform duration-300">
+                  <Car className="w-7 h-7" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-bold text-lg text-slate-900 dark:text-white leading-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    Go Cabs & Transport
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Reliable rides & logistics</p>
+                </div>
+
+                {/* Premium Glassmorphic Badge */}
+                <div className="ml-auto bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-rose-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider relative z-10">Soon</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Popular Services - Scroll-Linked Animation */}
         <section className="px-3 mt-8 pb-4">
           <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-5 flex items-center gap-2 px-2">
@@ -246,7 +310,6 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
           <div className="flex flex-col gap-8 min-h-75">
             {displayedServices.map((service, idx) => {
               const uniqueKey = service.id || service._id || idx;
-              const isActive = String(activeCardId) === String(service._id || service.id);
 
               return (
                 <motion.div
@@ -254,7 +317,7 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   whileInView={{
                     opacity: 1,
-                    y: 0,
+                    scale: 1,
                     transition: {
                       type: "spring",
                       bounce: 0.4,
@@ -263,13 +326,12 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                   }}
                   viewport={{ once: true, margin: "-10%" }}
                   onClick={() => navigate(`/services/${service._id || service.id}`)}
-                  className={`zoom-card rotating-border-home relative rounded-4xl cursor-pointer mb-8 group ${isActive ? 'active' : ''}`}
+                  className={`zoom-card rotating-border-home relative rounded-4xl cursor-pointer mb-8 group`}
                   style={{
                     '--border-color-1': '#f43f5e', // Rose 500
                     '--border-color-2': '#fbbf24', // Amber 400
                     '--glow-color': 'rgba(244, 63, 94, 0.4)'
                   }}
-                  data-id={service._id || service.id}
                 >
                   <div className="rounded-4xl overflow-hidden w-full h-full relative z-10 bg-white dark:bg-slate-900 shadow-xl dark:shadow-slate-900/50 border border-rose-100 dark:border-rose-500/20">
                     {/* Image Section */}
@@ -277,7 +339,7 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                       <img
                         src={service.headerImage || service.image || 'https://images.unsplash.com/photo-1581578731117-104f2a41d58e?auto=format&fit=crop&q=80'}
                         alt={service.title}
-                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${isActive ? 'scale-110' : 'scale-100'} group-hover:scale-110`}
+                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110`}
                       />
                       <div className="absolute top-0 inset-x-0 h-16 bg-linear-to-b from-black/50 to-transparent"></div>
                       <div className="absolute top-5 left-5">
@@ -324,6 +386,12 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
       </main>
 
       <MobileBottomNav />
+
+      <ComingSoonModal
+        isOpen={!!comingSoonTitle}
+        onClose={() => setComingSoonTitle(null)}
+        title={comingSoonTitle}
+      />
     </div >
   );
 };

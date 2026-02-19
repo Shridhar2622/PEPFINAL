@@ -6,11 +6,8 @@ const SoundContext = createContext();
 export const SoundProvider = ({ children }) => {
     const { isAuthenticated } = useUser();
     const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
-        const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-        if (!isMobile) return false; // Force disabled on desktop
-
         const saved = localStorage.getItem('sound_enabled');
-        return saved !== null ? JSON.parse(saved) : false; // Default to false
+        return saved !== null ? JSON.parse(saved) : true; // Default to true for everyone
     });
 
     // Reset sound on logout
@@ -56,31 +53,15 @@ export const SoundProvider = ({ children }) => {
     }, [isSoundEnabled, audioCtx]);
 
     const playNotificationSound = useCallback(() => {
-        if (!isSoundEnabled || !audioCtx) return;
+        if (!isSoundEnabled) return;
 
-        // A pleasant "Ding" sound (Dual frequency)
-        const oscillator1 = audioCtx.createOscillator();
-        const oscillator2 = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator1.type = 'sine';
-        oscillator2.type = 'sine';
-
-        oscillator1.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-        oscillator2.frequency.setValueAtTime(1108.73, audioCtx.currentTime); // C#6 (Major third)
-
-        gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-
-        oscillator1.connect(gainNode);
-        oscillator2.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        oscillator1.start();
-        oscillator2.start();
-        oscillator1.stop(audioCtx.currentTime + 0.5);
-        oscillator2.stop(audioCtx.currentTime + 0.5);
-    }, [isSoundEnabled, audioCtx]);
+        try {
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+            audio.play().catch(e => console.log("Audio play failed (user interaction needed first):", e));
+        } catch (err) {
+            console.error("Error playing notification sound:", err);
+        }
+    }, [isSoundEnabled]);
 
     useEffect(() => {
         localStorage.setItem('sound_enabled', JSON.stringify(isSoundEnabled));

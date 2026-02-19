@@ -110,7 +110,9 @@ export const BookingProvider = ({ children }) => {
                 id: doc.review._id || doc.review.id,
                 rating: doc.review.rating,
                 comment: doc.review.review
-            } : null
+            } : null,
+            cancelledBy: doc.cancelledBy,
+            cancelledAt: doc.cancelledAt
         };
     };
 
@@ -199,7 +201,7 @@ export const BookingProvider = ({ children }) => {
     const cancelBooking = async (id) => {
         try {
             await client.patch(`/bookings/${id}/status`, { status: 'CANCELLED' });
-            setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'Canceled' } : b));
+            setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'Canceled', cancelledBy: 'USER', cancelledAt: new Date().toISOString() } : b));
             toast.success('Booking cancelled');
         } catch (err) {
             console.error("Failed to cancel booking", err);

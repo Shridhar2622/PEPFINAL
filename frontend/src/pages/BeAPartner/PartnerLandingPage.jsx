@@ -74,7 +74,7 @@ const PartnerLandingPage = () => {
                 <div className="max-w-6xl mx-auto">
                     <div className="grid md:grid-cols-3 gap-8">
                         {[
-                            { icon: TrendingUp, title: "Zero Commission Period", desc: "Keep 100% of your earnings for the first 30 days. Transparent pricing afterwards." },
+                            { icon: TrendingUp, title: "Zero Commission Period", desc: "Keep 100% of your earnings for the first 15 days. Transparent pricing afterwards." },
                             { icon: Clock, title: "Flexible Schedule", desc: "You are the boss. Go online when you want to work, go offline when you need a break." },
                             { icon: Shield, title: "Insurance Cover", desc: "Accidental insurance coverage up to ₹5 Lakhs for all verified partners on active jobs." },
                         ].map((item, i) => (

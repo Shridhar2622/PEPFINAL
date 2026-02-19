@@ -123,7 +123,7 @@ const ServiceDetailsPage = () => {
                             <div className="flex items-center gap-1.5">
                                 <Star className="w-5 h-5 text-yellow-400 fill-current" />
                                 <span className="text-white font-bold">{service.rating > 0 ? service.rating : "New"}</span>
-                                {service.rating > 0 && <span className="text-white/60">({reviews.length} reviews)</span>}
+                                {service.rating > 0 && <span className="text-white/60">({service.reviewsCount || 0} reviews)</span>}
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <Clock className="w-5 h-5" />
@@ -176,7 +176,15 @@ const ServiceDetailsPage = () => {
                                                 {service.technician?.phone || "No phone available"}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                                                <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-semibold text-slate-900 dark:text-white">15 Days Warranty</h3>
+                                                <p className="text-sm text-slate-500 dark:text-slate-400">On all repairs</p>
+                                            </div>
+                                        </div>              <div className="flex items-center gap-1.5">
                                             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                                                 <MapPin className="w-3 h-3" />
                                             </div>
@@ -230,7 +238,7 @@ const ServiceDetailsPage = () => {
                         <ul className="space-y-4">
                             <li className="flex items-start gap-3">
                                 <div className="w-2 h-2 mt-2 rounded-full bg-blue-500 shrink-0" />
-                                <span className="text-slate-600 dark:text-slate-300 font-medium">30-day warranty on all services</span>
+                                <span className="text-slate-600 dark:text-slate-300 font-medium">15-day warranty on all services</span>
                             </li>
                             <li className="flex items-start gap-3">
                                 <div className="w-2 h-2 mt-2 rounded-full bg-blue-500 shrink-0" />

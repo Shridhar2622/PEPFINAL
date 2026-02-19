@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { Search, ArrowRight, ShieldCheck, Clock, Award, Hammer, Zap, Refrigerator, Droplets, Truck, Calendar, Map, CheckCircle } from 'lucide-react';
+import { Search, ArrowRight, ShieldCheck, Clock, Award, Hammer, Zap, Refrigerator, Droplets, Truck, Calendar, Map, CheckCircle, Car, Hotel, Cloud } from 'lucide-react';
 // import { useAdmin } from '../../context/AdminContext';
 import ServiceCard from '../../components/common/ServiceCard';
 import ServiceStack from '../../components/home/ServiceStack';
@@ -41,6 +41,8 @@ const particleColors = ['#ffffff', '#aaacb9'];
 
 
 
+import ComingSoonModal from '../../components/common/ComingSoonModal';
+
 const HomePage = () => {
   const { data: categories = [] } = useCategories();
   const { data: servicesData, isLoading: servicesLoading } = useServices({ limit: 10 });
@@ -55,6 +57,8 @@ const HomePage = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false); // Kept to avoid breaking references temporarily
+
+  const [comingSoonTitle, setComingSoonTitle] = useState(null);
 
   const handleBookClick = (service) => {
     setSelectedService(service);
@@ -318,7 +322,7 @@ const HomePage = () => {
                 {[
                   { icon: Clock, text: "90 min Arrival" },
                   { icon: ShieldCheck, text: "Verified Experts" },
-                  { icon: Award, text: "30-Day Warranty" }
+                  { icon: Award, text: "15-Day Warranty" }
                 ].map((item, idx) => (
                   <div key={idx} className="trust-item invisible flex items-center gap-2 bg-slate-900/50 backdrop-blur-md border border-slate-800 px-5 py-2.5 rounded-full hover:bg-slate-800/50 transition-colors duration-300 cursor-default">
                     <item.icon className="w-4 h-4 text-slate-400" />
@@ -351,6 +355,95 @@ const HomePage = () => {
           {/* Categories Section - ScrollStack */}
           <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full scroll-mt-24">
             <ServiceStack />
+          </section>
+
+          {/* Other Services Section (New Desktop) */}
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full animate-item">
+            <div className="flex flex-col mb-8">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">Other Services</h2>
+              <p className="text-slate-500 dark:text-slate-400 text-lg">Expanded offerings for your convenience</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+              {/* Reservice Hotels Card */}
+              <div
+                onClick={() => setComingSoonTitle("Reservice Hotels")}
+                className="group relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300 cursor-pointer overflow-hidden shadow-lg hover:shadow-2xl"
+              >
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-linear-to-br from-blue-50/50 to-transparent dark:from-blue-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:rotate-12 duration-500">
+                  <Map className="w-32 h-32 text-slate-900 dark:text-white" />
+                </div>
+
+                <div className="relative z-10 flex items-start gap-6">
+                  <div className="w-20 h-20 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-sm">
+                    <Hotel className="w-9 h-9" />
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Reservice Hotels</h3>
+
+                      {/* Premium Glassmorphic Badge */}
+                      <div className="bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-blue-500/10 relative overflow-hidden group-hover:shadow-blue-500/20 transition-shadow">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-widest relative z-10">Soon</span>
+                      </div>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-lg">Premium accommodation services tailored for your comfort.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reservice Go Cabs Card */}
+              <div
+                onClick={() => setComingSoonTitle("Reservice Go Cabs & Transport")}
+                className="group relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300 cursor-pointer overflow-hidden shadow-lg hover:shadow-2xl"
+              >
+                {/* Background Effects */}
+                <div className="absolute inset-0 bg-linear-to-br from-amber-50/50 to-transparent dark:from-amber-900/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:-rotate-12 duration-500">
+                  <Truck className="w-32 h-32 text-slate-900 dark:text-white" />
+                </div>
+
+                {/* Animation: Moving Car */}
+                <motion.div
+                  initial={{ x: -100 }}
+                  animate={{ x: 800 }}
+                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  className="absolute bottom-4 left-0 z-0"
+                >
+                  <Car className="w-24 h-24 text-amber-500/20 dark:text-amber-500/30 filter drop-shadow-sm" />
+                </motion.div>
+
+                <div className="relative z-10 flex items-start gap-6">
+                  <div className="w-20 h-20 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 shadow-sm">
+                    <Truck className="w-9 h-9" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Go Cabs & Transport</h3>
+
+                      {/* Premium Glassmorphic Badge */}
+                      <div className="bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg shadow-amber-500/10 relative overflow-hidden group-hover:shadow-amber-500/20 transition-shadow">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                        </span>
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-widest relative z-10">Soon</span>
+                      </div>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 leading-relaxed text-lg">Reliable transportation solutions for your daily commute.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* Popular Services Section */}
@@ -386,14 +479,11 @@ const HomePage = () => {
             <div className="bg-slate-900 dark:bg-slate-800 rounded-3xl p-10 md:p-14 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left shadow-2xl">
               <div className="relative z-10 max-w-lg">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Broken Appliance? <br />We Fix It Fast.</h2>
-                <p className="text-slate-400 mb-8 text-lg font-light leading-relaxed">Expert technicians for AC, Plumbing, Electrical & more. <br />Get <span className="font-semibold text-white">20% off</span> your first service.</p>
+                <p className="text-slate-400 mb-8 text-lg font-light leading-relaxed">Expert technicians for AC, Plumbing, Electrical & more. <br />Experience effective repairs today.</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                  <div className="bg-white/10 backdrop-blur-sm px-6 py-3.5 rounded-xl border border-white/10 text-slate-200 font-mono tracking-wider text-center select-all">
-                    NEWUSER20
-                  </div>
-                  <Link to="/bookings">
+                  <Link to="/services">
                     <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100 border-none shadow-xl cursor-pointer font-bold px-8">
-                      Book a Repair
+                      Explore Services
                     </Button>
                   </Link>
                 </div>
@@ -426,6 +516,12 @@ const HomePage = () => {
           onClose={() => setIsModalOpen(false)}
           service={selectedService}
           onConfirm={handleConfirmBooking}
+        />
+
+        <ComingSoonModal
+          isOpen={!!comingSoonTitle}
+          onClose={() => setComingSoonTitle(null)}
+          title={comingSoonTitle}
         />
 
         <AnimatePresence>

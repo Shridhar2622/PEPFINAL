@@ -95,6 +95,13 @@ const bookingSchema = new mongoose.Schema({
     },
     completedAt: {
         type: Date
+    },
+    cancelledBy: {
+        type: String,
+        enum: ['USER', 'ADMIN', 'TECHNICIAN']
+    },
+    cancelledAt: {
+        type: Date
     }
 }, {
     timestamps: true,

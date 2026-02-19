@@ -1,7 +1,7 @@
 import React from 'react';
 
 import MobileBottomNav from '../../components/mobile/MobileBottomNav';
-import { ArrowLeft, Clock, Calendar, MessageSquare, Phone, Mail, Star, Eye, HelpCircle, ShieldCheck, Sparkles, MapPin, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, MessageSquare, Phone, Mail, Star, Eye, HelpCircle, ShieldCheck, Sparkles, MapPin, ChevronRight, X } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
@@ -28,10 +28,10 @@ const MobileBookingsPage = () => {
 
     // Filter bookings based on status
     const filteredBookings = React.useMemo(() => contextBookings.filter(b => {
-        const status = b.status?.toUpperCase() || 'PENDING';
-        if (activeStatus === 'Pending') return status === 'PENDING';
-        if (activeStatus === 'Assigned') return ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(status);
-        if (activeStatus === 'Completed') return ['COMPLETED', 'CANCELLED'].includes(status);
+        const status = b.status;
+        if (activeStatus === 'Pending') return status === 'Pending';
+        if (activeStatus === 'Assigned') return ['Assigned', 'In Progress'].includes(status);
+        if (activeStatus === 'Completed') return ['Completed', 'Canceled'].includes(status);
         return true;
     }), [contextBookings, activeStatus]);
 
@@ -76,9 +76,9 @@ const MobileBookingsPage = () => {
 
     // Counts for tabs
     const counts = {
-        Pending: contextBookings.filter(b => (b.status?.toUpperCase() || 'PENDING') === 'PENDING').length,
-        Assigned: contextBookings.filter(b => ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(b.status?.toUpperCase())).length,
-        Completed: contextBookings.filter(b => ['COMPLETED', 'CANCELLED'].includes(b.status?.toUpperCase())).length,
+        Pending: contextBookings.filter(b => b.status === 'Pending').length,
+        Assigned: contextBookings.filter(b => ['Assigned', 'In Progress'].includes(b.status)).length,
+        Completed: contextBookings.filter(b => ['Completed', 'Canceled'].includes(b.status)).length,
     };
 
     const tabs = ['Pending', 'Assigned', 'Completed'];
@@ -191,7 +191,9 @@ const MobileBookingsPage = () => {
                             const statusColors = {
                                 Pending: { c1: '#ff0033', c2: '#330000', glow: 'rgba(255, 0, 51, 0.7)' }, // Neon Red
                                 Assigned: { c1: '#fbbf24', c2: '#713f12', glow: 'rgba(251, 191, 36, 0.5)' }, // Neon Yellow
-                                Completed: { c1: '#22c55e', c2: '#052e16', glow: 'rgba(34, 197, 94, 0.5)' } // Neon Green
+                                'In Progress': { c1: '#fbbf24', c2: '#713f12', glow: 'rgba(251, 191, 36, 0.5)' }, // Neon Yellow
+                                Completed: { c1: '#22c55e', c2: '#052e16', glow: 'rgba(34, 197, 94, 0.5)' }, // Neon Green
+                                Canceled: { c1: '#ff0033', c2: '#330000', glow: 'rgba(255, 0, 51, 0.7)' } // Neon Red
                             };
                             const colors = statusColors[booking.status] || { c1: '#2563eb', c2: '#7c3aed', glow: 'rgba(37, 99, 235, 0.5)' };
 
@@ -226,10 +228,10 @@ const MobileBookingsPage = () => {
                                                     <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1 flex-1">{booking.serviceName}</h3>
                                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide shrink-0
                                                 ${booking.status === 'Completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900/30' :
-                                                            booking.status === 'Assigned' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30' :
-                                                                booking.status === 'Canceled' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30' :
+                                                            ['Assigned', 'In Progress'].includes(booking.status) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30' :
+                                                                booking.status === 'Canceled' || booking.status === 'Cancelled' ? 'bg-rose-600 text-white border border-rose-700 shadow-[0_0_10px_rgba(225,29,72,0.3)]' :
                                                                     'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30'}`}>
-                                                        {booking.status}
+                                                        {booking.status === 'Canceled' || booking.status === 'Cancelled' ? 'Cancelled' : booking.status}
                                                     </span>
                                                 </div>
                                                 <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -300,7 +302,23 @@ const MobileBookingsPage = () => {
                                                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
                                                 </div>
                                             </div>
-                                        ) : (
+                                        ) : booking.status === 'Canceled' || booking.status === 'Cancelled' ? (
+                                            <div className="flex flex-col gap-3 py-5 px-6 bg-rose-50/50 dark:bg-rose-950/20 rounded-[1.5rem] border border-rose-100 dark:border-rose-900/30">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-rose-100/50 dark:bg-rose-900/40 flex items-center justify-center">
+                                                        <X className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-rose-900 dark:text-rose-100">
+                                                            Cancelled
+                                                        </p>
+                                                        <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                                                            Please give us one more chance.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (booking.status !== 'Canceled' && booking.status !== 'Cancelled') ? (
                                             <div className="flex items-center gap-3 py-4 px-5 bg-slate-50/50 dark:bg-slate-800/20 rounded-[1.5rem] border border-dashed border-slate-200 dark:border-slate-800/50">
                                                 <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                                     <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
@@ -314,11 +332,11 @@ const MobileBookingsPage = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                        )}
+                                        ) : null}
 
                                         {/* Actions */}
                                         <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                                            {['Pending', 'Assigned', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status) ? (
+                                            {['Pending', 'Assigned', 'In Progress'].includes(booking.status) ? (
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();

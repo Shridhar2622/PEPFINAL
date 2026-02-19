@@ -133,9 +133,7 @@ const RegisterPage = () => {
         const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
         const name = `${firstName} ${lastName}`.trim();
 
-        console.log("Submitting registration...");
-        const result = await register(name, email, password, password, phone, role, tokenToSend);
-        console.log("Registration Result:", result);
+
 
         if (result.success) {
             setSuccessMessage('Created successfully ✓');

@@ -17,6 +17,7 @@ const TechnicianRegisterPage = () => {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
+    const [pincode, setPincode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     // Captcha
@@ -39,7 +40,7 @@ const TechnicianRegisterPage = () => {
         const name = `${firstName} ${lastName}`.trim();
 
         // Register with role 'TECHNICIAN'
-        const result = await register(name, email, password, password, phone, 'TECHNICIAN', tokenToSend);
+        const result = await register(name, email, password, password, phone, 'TECHNICIAN', tokenToSend, pincode);
 
         if (result.success) {
             toast.success("Account created! Let's set up your profile.");
@@ -140,6 +141,16 @@ const TechnicianRegisterPage = () => {
                             placeholder="+91 98765 43210"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
+                            required
+                        />
+
+                        <Input
+                            id="pincode"
+                            label="Pincode"
+                            placeholder="123456"
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value)}
+                            maxLength={6}
                             required
                         />
 

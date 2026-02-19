@@ -99,7 +99,7 @@ export const AdminProvider = ({ children }) => {
         } else {
             subServices = [
                 { id: 'basic', name: "Basic Service", price: service.price, description: "Includes diagnosis and minor repairs.", isActive: true },
-                { id: 'premium', name: "Premium Service", price: Math.round(service.price * 2), description: "Deep cleaning + parts check + 30 day warranty.", isActive: true },
+                { id: 'premium', name: "Premium Service", price: Math.round(service.price * 2), description: "Deep cleaning + parts check + 15 day warranty.", isActive: true },
                 { id: 'consultation', name: "Consultation", price: 199, description: "Expert visit and cost estimation.", isActive: true },
             ];
         }
@@ -673,11 +673,11 @@ export const AdminProvider = ({ children }) => {
     useEffect(() => {
         if (!socket || !isAdminAuthenticated) return;
 
-        console.log('Admin Socket Listening...');
+
 
         // BOOKINGS
         const handleBookingCreated = (newBooking) => {
-            console.log('Socket: Booking Created', newBooking._id);
+
             playNotificationSound();
             toast.success(`New Booking: ${newBooking.category?.name || 'Service'}`);
             setAllBookings(prev => [newBooking, ...prev]);
@@ -685,9 +685,21 @@ export const AdminProvider = ({ children }) => {
         };
 
         const handleBookingUpdated = (updatedBooking) => {
-            console.log('Socket: Booking Updated', updatedBooking._id);
+
             setAllBookings(prev => prev.map(b => (b._id === updatedBooking._id || b.id === updatedBooking._id) ? updatedBooking : b));
             fetchData(); // Refresh stats
+
+            // Notification Logic for Admin
+            if (updatedBooking.status === 'ACCEPTED') {
+                playNotificationSound();
+                toast.success(`Technician Accepted Job: ${updatedBooking.category?.name || 'Service'}`);
+            } else if (updatedBooking.status === 'IN_PROGRESS') {
+                playNotificationSound();
+                toast.success(`Job Started: ${updatedBooking.category?.name || 'Service'}`);
+            } else if (updatedBooking.status === 'COMPLETED') {
+                playNotificationSound();
+                toast.success(`Job Completed: ${updatedBooking.category?.name || 'Service'}`);
+            }
         };
 
         // TECHNICIANS

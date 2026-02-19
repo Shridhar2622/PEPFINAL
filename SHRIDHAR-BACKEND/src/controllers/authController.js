@@ -18,11 +18,7 @@ exports.register = async (req, res, next) => {
             : ['845438'];
 
         // 2) Validate Pincode (Before Creating User)
-        console.log('[DEBUG] Registration Pincode Check:', {
-            provided: req.body.pincode,
-            type: typeof req.body.pincode,
-            allowed: allowedPincodes
-        });
+
 
         if (req.body.role === 'USER') {
             const cleanProvided = req.body.pincode ? req.body.pincode.toString().trim() : '';

@@ -168,9 +168,7 @@ const TechnicianOnboardingPage = () => {
 
             if (docResult.success) {
                 toast.success("Profile created & documents uploaded!", { id: 'onboarding' });
-                setTimeout(() => {
-                    navigate('/technician/dashboard');
-                }, 1500);
+                navigate('/technician/dashboard');
             } else {
                 toast.error(docResult.message || "Document upload failed", { id: 'onboarding' });
                 setIsLoading(false);
@@ -183,23 +181,23 @@ const TechnicianOnboardingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12 px-4 sm:px-6">
-            <div className="max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-3xl shadow-xl overflow-hidden">
-                <div className="bg-rose-600 p-8 text-center">
-                    <h1 className="text-3xl font-black text-white mb-2">Complete Your Profile</h1>
-                    <p className="text-rose-100">Tell customers about yourself to get started.</p>
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-6 md:py-12 px-3 md:px-6">
+            <div className="max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-2xl md:rounded-3xl shadow-xl overflow-hidden">
+                <div className="bg-rose-600 p-6 md:p-8 text-center">
+                    <h1 className="text-2xl md:text-3xl font-black text-white mb-2">Complete Your Profile</h1>
+                    <p className="text-rose-100 text-sm md:text-base">Tell customers about yourself to get started.</p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-8">
+                <form onSubmit={handleSubmit} className="p-5 md:p-8 space-y-6 md:space-y-8">
                     {/* Photo Upload */}
                     <div className="flex flex-col items-center">
-                        <div className="relative w-32 h-32 mb-4">
+                        <div className="relative w-24 h-24 md:w-32 md:h-32 mb-4">
                             <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-lg">
                                 {previewUrl ? (
                                     <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                        <Upload className="w-10 h-10" />
+                                        <Upload className="w-8 h-8 md:w-10 md:h-10" />
                                     </div>
                                 )}
                             </div>
@@ -208,7 +206,7 @@ const TechnicianOnboardingPage = () => {
                                 <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                             </label>
                         </div>
-                        <p className="text-sm text-slate-500">Upload a professional photo</p>
+                        <p className="text-xs md:text-sm text-slate-500">Upload a professional photo</p>
                     </div>
 
                     {/* Bio */}
@@ -225,10 +223,10 @@ const TechnicianOnboardingPage = () => {
                     </div>
 
                     {/* Skills */}
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Your Skills</label>
+                    <div className="space-y-4">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Your Skills</label>
                         <div className="flex flex-wrap gap-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 w-full">
                                 {isSkillsLoading ? (
                                     <div className="col-span-4 text-center py-4 text-slate-500">Loading skills...</div>
                                 ) : skillsList.map((skill) => (
@@ -236,7 +234,7 @@ const TechnicianOnboardingPage = () => {
                                         key={skill}
                                         type="button"
                                         onClick={() => handleSkillToggle(skill)}
-                                        className={`p-3 rounded-xl border font-bold text-sm transition-all ${selectedSkills.includes(skill)
+                                        className={`p-2.5 md:p-3 rounded-xl border font-bold text-xs md:text-sm transition-all ${selectedSkills.includes(skill)
                                             ? 'bg-rose-600 border-rose-600 text-white shadow-lg shadow-rose-600/20'
                                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-rose-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
                                             }`}
@@ -254,43 +252,43 @@ const TechnicianOnboardingPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Aadhaar */}
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative">
+                            <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative">
                                 <input required type="file" accept="image/*,application/pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setAadharCard(e.target.files[0])} />
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${aadharCard ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Upload className="w-5 h-5" />
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${aadharCard ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Upload className="w-4 h-4 md:w-5 md:h-5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{aadharCard ? aadharCard.name : 'Aadhaar Card *'}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase font-black">Mandatory</p>
+                                        <p className="text-[11px] md:text-xs font-bold text-slate-900 dark:text-white truncate">{aadharCard ? aadharCard.name : 'Aadhaar Card *'}</p>
+                                        <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-black">Mandatory</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* PAN */}
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative">
+                            <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative">
                                 <input required type="file" accept="image/*,application/pdf" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setPanCard(e.target.files[0])} />
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${panCard ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Upload className="w-5 h-5" />
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${panCard ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Upload className="w-4 h-4 md:w-5 md:h-5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{panCard ? panCard.name : 'PAN Card *'}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase font-black">Mandatory</p>
+                                        <p className="text-[11px] md:text-xs font-bold text-slate-900 dark:text-white truncate">{panCard ? panCard.name : 'PAN Card *'}</p>
+                                        <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-black">Mandatory</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Resume */}
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative md:col-span-2">
+                            <div className="p-3 md:p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-400 transition-colors cursor-pointer relative md:col-span-2">
                                 <input type="file" accept=".pdf,.doc,.docx" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e => setResume(e.target.files[0])} />
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${resume ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <Upload className="w-5 h-5" />
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center ${resume ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                        <Upload className="w-4 h-4 md:w-5 md:h-5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{resume ? resume.name : 'CV / Resume (Optional)'}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase font-black">Optional</p>
+                                        <p className="text-[11px] md:text-xs font-bold text-slate-900 dark:text-white truncate">{resume ? resume.name : 'CV / Resume (Optional)'}</p>
+                                        <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-black">Optional</p>
                                     </div>
                                 </div>
                             </div>

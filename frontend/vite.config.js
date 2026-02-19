@@ -6,13 +6,21 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
-    host: true, // or '0.0.0.0'
-    port: 5173,
-    allowedHosts: ['reservice.in', 'www.reservice.in', 'localhost'],
+    host: '0.0.0.0',
+    port: 3000,
+    strictPort: true,
+    allowedHosts: 'all', // Allows any host during development to fix tunnel header errors
+    cors: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
+        secure: false,
+      },
+      '/socket.io': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        ws: true,
         secure: false,
       },
     },

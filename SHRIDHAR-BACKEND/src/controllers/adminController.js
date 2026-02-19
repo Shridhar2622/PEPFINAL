@@ -7,6 +7,7 @@ const Settings = require('../models/Settings');
 
 const AppError = require('../utils/AppError');
 const adminService = require('../services/adminService');
+const socketService = require('../utils/socket');
 
 exports.createTechnician = async (req, res, next) => {
     try {
@@ -169,8 +170,7 @@ exports.approveTechnician = async (req, res, next) => {
         }
 
         // Validate Categories exist? (Optional but good)
-        // const Category = require('../models/Category');
-        // const count = await Category.countDocuments({ _id: { $in: categoryIds } });
+
         // if (count !== categoryIds.length) ...
 
         technician.categories = categoryIds || [];
@@ -522,6 +522,8 @@ exports.cancelBooking = async (req, res, next) => {
 
         const previousStatus = booking.status;
         booking.status = 'CANCELLED';
+        booking.cancelledBy = req.user.role; // This is 'ADMIN'
+        booking.cancelledAt = Date.now();
         await booking.save({ validateBeforeSave: false });
 
         // LOG ACTION
@@ -532,6 +534,16 @@ exports.cancelBooking = async (req, res, next) => {
             targetId: booking._id,
             details: { previousStatus, reason: 'Admin Force Cancel' }
         });
+
+        // SOCKET EMISSION
+        try {
+            const io = socketService.getIo();
+            io.to('admin-room').emit('booking:updated', booking);
+            if (booking.customer) io.to(`user:${booking.customer}`).emit('booking:updated', booking);
+            if (booking.technician) io.to(`user:${booking.technician}`).emit('booking:updated', booking);
+        } catch (err) {
+            console.error('Socket emission failed in admin cancel:', err.message);
+        }
 
         res.status(200).json({ status: 'success', data: { booking } });
     } catch (error) {

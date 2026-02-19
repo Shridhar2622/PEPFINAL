@@ -79,7 +79,7 @@ const MobileSearchPage = () => {
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
-            console.log("Voice recognition started");
+
             setIsListening(true);
         };
 
@@ -101,7 +101,7 @@ const MobileSearchPage = () => {
         };
 
         recognition.onend = () => {
-            console.log("Voice recognition ended");
+
             setIsListening(false);
         };
 

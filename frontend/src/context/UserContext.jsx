@@ -219,7 +219,7 @@ export const UserProvider = ({ children }) => {
             setUser({ ...user, savedServices: [...(user.savedServices || []), serviceId] });
         }
         toast.success("Service saved");
-        // TODO: Call API to persist
+
     };
 
     const removeService = async (serviceId) => {
@@ -230,7 +230,7 @@ export const UserProvider = ({ children }) => {
             setUser({ ...user, savedServices: (user.savedServices || []).filter(s => (s._id || s) !== serviceId) });
         }
         toast.success("Service removed");
-        // TODO: Call API to persist
+
     };
 
     return (
