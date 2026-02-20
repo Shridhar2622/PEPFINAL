@@ -42,16 +42,10 @@ const LoginPage = () => {
     const { login, register } = useUser();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [isExistingCustomer, setIsExistingCustomer] = useState(() => {
-        return location.state?.isSignUp ? false : true;
-    });
-
-    // Form fields
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [role, setRole] = useState('USER');
+    const [rememberMe, setRememberMe] = useState(true);
+
 
     useGSAP(() => {
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -135,52 +129,34 @@ const LoginPage = () => {
 
         const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
 
-        if (isExistingCustomer) {
-            // LOGIN FLOW
-            const result = await login(email, password, tokenToSend);
-            if (result.success) {
-                toast.success('Welcome back!');
+        // LOGIN FLOW
+        // No role enforced - Universal Login
+        const result = await login(email, password, tokenToSend, null, rememberMe);
 
-                // Redirect to original location if available, otherwise switch based on role
+        if (result.success) {
+            toast.success('You are logged in');
+
+            // Redirect based on ROLE
+            const role = result.user?.role;
+
+            if (role === 'TECHNICIAN') {
+                navigate('/technician/dashboard');
+            } else if (role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else {
+                // Default User/Customer
                 const from = location.state?.from?.pathname;
-                if (from) {
+                if (from && !from.startsWith('/technician') && !from.startsWith('/admin')) {
                     navigate(from, { replace: true });
                 } else {
-                    if (result.user?.role === 'TECHNICIAN') {
-                        navigate('/technician/dashboard');
-                    } else if (result.user?.role === 'ADMIN') {
-                        navigate('/admin/dashboard');
-                    } else {
-                        navigate('/bookings');
-                    }
+                    navigate('/bookings');
                 }
-            } else {
-                toast.error(result.message || 'Login failed');
-                if (recaptchaRef.current) recaptchaRef.current.reset();
-                setRecaptchaToken(null);
             }
         } else {
-            // REGISTER FLOW
-            const result = await register(name, email, password, password, phone, role, tokenToSend);
+            toast.error(result.message || 'Login failed');
+            if (recaptchaRef.current) recaptchaRef.current.reset();
+            setRecaptchaToken(null);
 
-            if (result.success) {
-                toast.success('Registration successful!');
-
-                const from = location.state?.from?.pathname;
-                if (from) {
-                    navigate(from, { replace: true });
-                } else {
-                    if (role === 'TECHNICIAN') {
-                        navigate('/technician/onboarding');
-                    } else {
-                        navigate('/bookings'); // Redirect to Dashboard
-                    }
-                }
-            } else {
-                toast.error(result.message || 'Registration failed');
-                if (recaptchaRef.current) recaptchaRef.current.reset();
-                setRecaptchaToken(null);
-            }
         }
         setIsLoading(false);
     };
@@ -193,8 +169,11 @@ const LoginPage = () => {
             return;
         }
 
+        // Note: Google Auth bypasses this frontend pincode check currently. 
+        // Logic would need to be added to the callback or Google flow to support pincode if required.
         const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
-        window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/auth/google?role=${role}&recaptcha=${tokenToSend}`;
+        window.location.href = `${import.meta.env.VITE_API_URL || 'https://api.reservice.in/api/v1'}/auth/google?role=USER&recaptcha=${tokenToSend}`;
+
     };
 
 
@@ -206,94 +185,27 @@ const LoginPage = () => {
                 <div className="w-full max-w-md mx-auto py-6">
                     <div className="mb-6 stagger-item">
                         <Link to="/" className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 bg-rose-600 rounded-lg flex items-center justify-center">
                                 <Wrench className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-bold text-blue-600">Reservice</span>
+                            <span className="text-xl font-bold text-rose-600">Reservice</span>
                         </Link>
                         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
-                            {isExistingCustomer ? 'Welcome Back' : 'Create your profile'}
+                            Welcome Back
                         </h1>
                         <p className="text-slate-500 text-sm">
-                            {isExistingCustomer ? 'Login to your verified account.' : 'Join Reservice today for expert home help.'}
+                            Login to your verified account.
                         </p>
                     </div>
 
-                    {/* Compact Mode Toggle */}
-                    <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-3 stagger-item">
-                        <button
-                            onClick={() => { setIsExistingCustomer(false); setRecaptchaToken(null); if (recaptchaRef.current) recaptchaRef.current.reset(); }}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${!isExistingCustomer ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            New Profile
-                        </button>
-                        <button
-                            onClick={() => { setIsExistingCustomer(true); setRecaptchaToken(null); if (recaptchaRef.current) recaptchaRef.current.reset(); }}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${isExistingCustomer ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            Existing Customer
-                        </button>
-                    </div>
+                    <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 mb-4 transition-colors">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        Back to Home
+                    </Link>
 
                     <form onSubmit={handleSubmit} className="space-y-3 stagger-item">
-                        {!isExistingCustomer && (
-                            <div className="grid grid-cols-2 gap-3">
-                                <Input
-                                    id="name"
-                                    label="Full Name"
-                                    placeholder="John Doe"
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                    className="py-1.5"
-                                />
-                                <Input
-                                    id="phone"
-                                    label="Phone"
-                                    placeholder="+91..."
-                                    type="tel"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    required
-                                    className="py-1.5"
-                                />
-                            </div>
-                        )}
 
-                        {!isExistingCustomer && (
-                            <div className="mb-2">
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">I am a</label>
-                                <div className="flex gap-3">
-                                    <label className={`flex-1 border rounded-lg p-2 cursor-pointer transition-colors ${role === 'USER' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'}`}>
-                                        <div className="flex items-center gap-2 font-bold text-xs">
-                                            <input
-                                                type="radio"
-                                                name="role"
-                                                value="USER"
-                                                checked={role === 'USER'}
-                                                onChange={(e) => setRole(e.target.value)}
-                                                className="text-blue-600 focus:ring-blue-600"
-                                            />
-                                            Customer
-                                        </div>
-                                    </label>
-                                    <label className={`flex-1 border rounded-lg p-2 cursor-pointer transition-colors ${role === 'TECHNICIAN' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'}`}>
-                                        <div className="flex items-center gap-2 font-bold text-xs">
-                                            <input
-                                                type="radio"
-                                                name="role"
-                                                value="TECHNICIAN"
-                                                checked={role === 'TECHNICIAN'}
-                                                onChange={(e) => setRole(e.target.value)}
-                                                className="text-blue-600 focus:ring-blue-600"
-                                            />
-                                            Technician
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        )}
+
 
                         <Input
                             id="email"
@@ -309,7 +221,8 @@ const LoginPage = () => {
                         <Input
                             id="password"
                             label="Password"
-                            placeholder={isExistingCustomer ? "Password" : "Create Password"}
+                            placeholder="Password"
+
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -326,15 +239,19 @@ const LoginPage = () => {
                             }
                         />
 
-                        {isExistingCustomer && (
-                            <div className="flex items-center justify-between text-xs">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-600" />
-                                    <span className="text-slate-600">Remember me</span>
-                                </label>
-                                <a href="#" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">Forgot?</a>
-                            </div>
-                        )}
+                        <div className="flex items-center justify-between text-xs">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                />
+                                <span className="text-slate-600">Remember me</span>
+                            </label>
+                            <a href="#" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">Forgot?</a>
+                        </div>
+
 
 
                         {/* Captcha for BOTH Login and Register */}
@@ -354,9 +271,8 @@ const LoginPage = () => {
                             type="submit"
                             disabled={isLoading}
                         >
-                            {isLoading
-                                ? (isExistingCustomer ? 'Signing in...' : 'Creating account...')
-                                : (isExistingCustomer ? 'Sign In' : 'Create Account')}
+                            {isLoading ? 'Signing in...' : 'Sign In'}
+
                         </Button>
 
 
@@ -384,6 +300,14 @@ const LoginPage = () => {
                                 </div>
                             </>
                         )}
+
+                        <p className="mt-6 text-center text-sm text-slate-500 stagger-item">
+                            Don't have an account?{' '}
+                            <Link to="/register" className="font-semibold text-rose-600 hover:text-rose-700">
+                                Sign up
+                            </Link>
+                        </p>
+
 
                     </form>
                 </div>

@@ -26,10 +26,7 @@ class NotificationService {
             socketService.emitToUser(recipient, 'notification', notification);
 
             // 3. Push Notification / Email - Placeholder
-            // TODO: Call email service if needed
 
-            // 3. Push Notification / Email - Placeholder
-            // TODO: Call email service if needed
 
             return notification;
         } catch (error) {

@@ -1,5 +1,7 @@
 const Service = require('../models/Service');
 const AppError = require('../utils/AppError');
+const socketService = require('../utils/socket');
+
 
 exports.createService = async (req, res, next) => {
     try {
@@ -28,6 +30,15 @@ exports.createService = async (req, res, next) => {
                 { $push: { services: newService._id } }
             );
         }
+
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('service:created', newService);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(201).json({
             status: 'success',
@@ -137,7 +148,7 @@ exports.getAllServices = async (req, res, next) => {
         }
 
         // Debug log to identify query issues
-        console.log('Final Service Query Object:', JSON.stringify(queryObj, null, 2));
+
 
         // Pagination
         const page = parseInt(req.query.page) || 1;
@@ -282,6 +293,15 @@ exports.updateService = async (req, res, next) => {
             runValidators: true
         });
 
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('service:updated', updatedService);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
+
         res.status(200).json({
             status: 'success',
             data: { service: updatedService }
@@ -321,6 +341,15 @@ exports.deleteService = async (req, res, next) => {
         }
 
         await Service.findByIdAndDelete(req.params.id);
+
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('service:deleted', { id: req.params.id });
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(204).json({
             status: 'success',

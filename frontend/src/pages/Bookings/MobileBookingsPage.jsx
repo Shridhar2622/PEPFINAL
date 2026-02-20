@@ -1,7 +1,8 @@
 import React from 'react';
 
 import MobileBottomNav from '../../components/mobile/MobileBottomNav';
-import { ArrowLeft, Clock, Calendar, MessageSquare, Phone, Mail, Star, Eye, HelpCircle, ShieldCheck, Sparkles, MapPin, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, MessageSquare, Phone, Mail, Star, Eye, HelpCircle, ShieldCheck, Sparkles, MapPin, ChevronRight, X } from 'lucide-react';
+
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
@@ -28,10 +29,11 @@ const MobileBookingsPage = () => {
 
     // Filter bookings based on status
     const filteredBookings = React.useMemo(() => contextBookings.filter(b => {
-        const status = b.status?.toUpperCase() || 'PENDING';
-        if (activeStatus === 'Pending') return status === 'PENDING';
-        if (activeStatus === 'Assigned') return ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(status);
-        if (activeStatus === 'Completed') return ['COMPLETED', 'CANCELLED'].includes(status);
+        const status = b.status;
+        if (activeStatus === 'Pending') return status === 'Pending';
+        if (activeStatus === 'Assigned') return ['Assigned', 'In Progress'].includes(status);
+        if (activeStatus === 'Completed') return ['Completed', 'Canceled'].includes(status);
+
         return true;
     }), [contextBookings, activeStatus]);
 
@@ -76,15 +78,17 @@ const MobileBookingsPage = () => {
 
     // Counts for tabs
     const counts = {
-        Pending: contextBookings.filter(b => (b.status?.toUpperCase() || 'PENDING') === 'PENDING').length,
-        Assigned: contextBookings.filter(b => ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'].includes(b.status?.toUpperCase())).length,
-        Completed: contextBookings.filter(b => ['COMPLETED', 'CANCELLED'].includes(b.status?.toUpperCase())).length,
+        Pending: contextBookings.filter(b => b.status === 'Pending').length,
+        Assigned: contextBookings.filter(b => ['Assigned', 'In Progress'].includes(b.status)).length,
+        Completed: contextBookings.filter(b => ['Completed', 'Canceled'].includes(b.status)).length,
+
     };
 
     const tabs = ['Pending', 'Assigned', 'Completed'];
 
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 pb-24 font-sans transition-colors duration-300 relative overflow-hidden">
+        <div className="min-h-screen bg-transparent dark:bg-slate-950 pb-24 font-sans transition-colors duration-300 relative overflow-hidden">
+
             {/* ... (Header and decorations - unchanged) ... */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:40px_40px] opacity-20 dark:opacity-10" />
@@ -191,7 +195,10 @@ const MobileBookingsPage = () => {
                             const statusColors = {
                                 Pending: { c1: '#ff0033', c2: '#330000', glow: 'rgba(255, 0, 51, 0.7)' }, // Neon Red
                                 Assigned: { c1: '#fbbf24', c2: '#713f12', glow: 'rgba(251, 191, 36, 0.5)' }, // Neon Yellow
-                                Completed: { c1: '#22c55e', c2: '#052e16', glow: 'rgba(34, 197, 94, 0.5)' } // Neon Green
+                                'In Progress': { c1: '#fbbf24', c2: '#713f12', glow: 'rgba(251, 191, 36, 0.5)' }, // Neon Yellow
+                                Completed: { c1: '#22c55e', c2: '#052e16', glow: 'rgba(34, 197, 94, 0.5)' }, // Neon Green
+                                Canceled: { c1: '#ff0033', c2: '#330000', glow: 'rgba(255, 0, 51, 0.7)' } // Neon Red
+
                             };
                             const colors = statusColors[booking.status] || { c1: '#2563eb', c2: '#7c3aed', glow: 'rgba(37, 99, 235, 0.5)' };
 
@@ -222,29 +229,33 @@ const MobileBookingsPage = () => {
                                                 <img src={booking.service?.headerImage || booking.image || booking.service?.image} alt={booking.serviceName} className="w-full h-full object-cover" />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1">{booking.serviceName}</h3>
+                                                <div className="flex justify-between items-start gap-2 mb-1">
+                                                    <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1 flex-1">{booking.serviceName}</h3>
                                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide shrink-0
                                                 ${booking.status === 'Completed' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900/30' :
-                                                            booking.status === 'Assigned' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30' :
-                                                                booking.status === 'Canceled' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30' :
+                                                            ['Assigned', 'In Progress'].includes(booking.status) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30' :
+                                                                booking.status === 'Canceled' || booking.status === 'Cancelled' ? 'bg-rose-600 text-white border border-rose-700 shadow-[0_0_10px_rgba(225,29,72,0.3)]' :
                                                                     'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30'}`}>
-                                                        {booking.status}
+                                                        {booking.status === 'Canceled' || booking.status === 'Cancelled' ? 'Cancelled' : booking.status}
                                                     </span>
                                                 </div>
-                                                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-3 flex items-center gap-2">
-                                                    <span>#{booking.id}</span>
-                                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
-                                                    <span>{booking.date} at {booking.time}</span>
+                                                <div className="text-slate-500 dark:text-slate-400 text-xs font-medium mb-3 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="font-bold">#{booking.id?.slice(-6) || 'N/A'}</span>
+                                                        <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                                                    </div>
+                                                    <span className="truncate">{booking.date} • {booking.time}</span>
+
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <div className="font-black text-rose-600 dark:text-rose-400">
                                                         ₹{booking.price}
                                                     </div>
                                                     {booking.status === 'Assigned' && booking.securityPin && (
-                                                        <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/40 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-900/30">
-                                                            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                                            <span className="text-[10px] font-black text-blue-700 dark:text-blue-300">PIN: {booking.securityPin}</span>
+                                                        <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/40 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-900/30">
+                                                            <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                            <span className="text-xs font-black text-blue-700 dark:text-blue-300 uppercase tracking-tight">PIN: <span className="text-sm font-mono tracking-widest ml-1">{booking.securityPin}</span></span>
+
                                                         </div>
                                                     )}
                                                 </div>
@@ -284,21 +295,39 @@ const MobileBookingsPage = () => {
                                                                 <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
                                                             </div>
                                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                                <div className="flex items-center gap-1">
+                                                                <div className="flex items-center gap-1 shrink-0">
                                                                     <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                                                                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">4.9</span>
                                                                 </div>
-                                                                <span className="w-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">{booking.technician.experience || '8+ Years Exp'}</span>
-                                                                <span className="w-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                                                                <span className="text-[10px] font-bold text-slate-400">Tap to view info</span>
+                                                                <span className="w-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0" />
+                                                                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter shrink-0">{booking.technician.experience || '8+ Years'}</span>
+                                                                <span className="w-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-full shrink-0" />
+                                                                <span className="text-[10px] font-bold text-slate-400 truncate flex-1 min-w-[50px]">View Info</span>
+
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
                                                 </div>
                                             </div>
-                                        ) : (
+                                        ) : booking.status === 'Canceled' || booking.status === 'Cancelled' ? (
+                                            <div className="flex flex-col gap-3 py-5 px-6 bg-rose-50/50 dark:bg-rose-950/20 rounded-[1.5rem] border border-rose-100 dark:border-rose-900/30">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-rose-100/50 dark:bg-rose-900/40 flex items-center justify-center">
+                                                        <X className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-rose-900 dark:text-rose-100">
+                                                            Cancelled
+                                                        </p>
+                                                        <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                                                            Please give us one more chance.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (booking.status !== 'Canceled' && booking.status !== 'Cancelled') ? (
+
                                             <div className="flex items-center gap-3 py-4 px-5 bg-slate-50/50 dark:bg-slate-800/20 rounded-[1.5rem] border border-dashed border-slate-200 dark:border-slate-800/50">
                                                 <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                                     <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
@@ -312,11 +341,12 @@ const MobileBookingsPage = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                        )}
+                                        ) : null}
 
                                         {/* Actions */}
-                                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
-                                            {['Pending', 'Assigned'].includes(booking.status) ? (
+                                        <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-50 dark:border-slate-800/50">
+                                            {['Pending', 'Assigned', 'In Progress'].includes(booking.status) ? (
+
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -324,30 +354,23 @@ const MobileBookingsPage = () => {
                                                             cancelBooking(booking.id);
                                                         }
                                                     }}
-                                                    className="py-3 text-xs font-bold text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors flex items-center justify-center gap-2"
+                                                    className="flex-1 py-3 text-xs font-bold text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-colors flex items-center justify-center gap-2"
+
                                                 >
                                                     Cancel Request
                                                 </button>
                                             ) : null}
 
-                                            {['Assigned', 'ACCEPTED', 'IN_PROGRESS'].includes(booking.status) ? (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateBookingStatus(booking.id, 'Completed');
-                                                    }}
-                                                    className="py-3 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl hover:bg-emerald-50 dark:hover:bg-emerald-900/10 transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    Mark as Done
-                                                </button>
-                                            ) : booking.status === 'Completed' ? (
+                                            {booking.status === 'Completed' ? (
+
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setSelectedBooking(booking);
                                                         setIsReviewOpen(true);
                                                     }}
-                                                    className="py-3 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors flex items-center justify-center gap-2"
+                                                    className="flex-1 py-3 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-2xl hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors flex items-center justify-center gap-2"
+
                                                 >
                                                     {booking.rating ? 'Update Review' : 'Rate Service'}
                                                 </button>

@@ -74,7 +74,7 @@ const ServiceStack = () => {
     }, [categories]);
 
     const promises = [
-        "we assure you the 30 day guarantee of our services performed",
+        "we assure you the 15 day guarantee of our services performed",
         "only background-verified and expert technicians at your doorstep",
         "quality service at transparent and upfront pricing"
     ];

@@ -5,7 +5,7 @@ const AppError = require('../utils/AppError');
 exports.getAllCategories = async (req, res, next) => {
     try {
         const categories = await Category.find({}).sort('order');
-        console.log(`[DEBUG] CategoryController: Found ${categories.length} categories in DB`);
+
 
         // Find corresponding services for each category
         const categoryIds = categories.map(cat => cat._id);
@@ -38,7 +38,7 @@ exports.getAllCategories = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
     try {
-        console.log('[DEBUG] createCategory Request Body:', req.body);
+
 
         let image = 'https://images.unsplash.com/photo-1581578731548-c64695cc6958'; // Default
 
@@ -53,7 +53,14 @@ exports.createCategory = async (req, res, next) => {
             image
         });
 
-        console.log('[DEBUG] Category Created:', newCategory);
+        // Socket Emission for Admin
+        try {
+            const socketService = require('../utils/socket');
+            socketService.getIo().to('admin-room').emit('category:created', newCategory);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(201).json({
             status: 'success',
@@ -101,6 +108,15 @@ exports.updateCategory = async (req, res, next) => {
             return next(new AppError('No category found with that ID', 404));
         }
 
+        // Socket Emission for Admin
+        try {
+            const socketService = require('../utils/socket');
+            socketService.getIo().to('admin-room').emit('category:updated', category);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
+
         res.status(200).json({
             status: 'success',
             data: {
@@ -119,6 +135,15 @@ exports.deleteCategory = async (req, res, next) => {
         if (!category) {
             return next(new AppError('No category found with that ID', 404));
         }
+
+        // Socket Emission for Admin
+        try {
+            const socketService = require('../utils/socket');
+            socketService.getIo().to('admin-room').emit('category:deleted', { id: req.params.id });
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(204).json({
             status: 'success',

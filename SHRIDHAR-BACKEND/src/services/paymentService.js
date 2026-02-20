@@ -45,7 +45,8 @@ class PaymentService {
             await transaction.save();
 
             // Update Booking
-            booking.paymentStatus = 'PAID'; // We need to add this field to Booking model if not exists
+            booking.paymentStatus = 'PAID';
+
             await booking.save({ validateBeforeSave: false }); // Avoid strict validation issues for now
 
             // Send Notifications
@@ -71,7 +72,7 @@ class PaymentService {
                 transaction
             };
         } else {
-            // TODO: Integrate Real Payment Gateway here
+
             // For now, fail if enabled but no gateway
             transaction.status = 'FAILED';
             await transaction.save();

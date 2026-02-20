@@ -45,7 +45,11 @@ const RegisterPage = () => {
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('USER'); // Default Role
+    const [pincode, setPincode] = useState('845438');
+    // Role is always USER here
+
+
+
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
@@ -122,55 +126,57 @@ const RegisterPage = () => {
         setSuccessMessage('');
         setPageError('');
 
-        const isCaptchaEnabled = import.meta.env.VITE_ENABLE_CAPTCHA === 'true';
+        try {
+            const isCaptchaEnabled = import.meta.env.VITE_ENABLE_CAPTCHA === 'true';
 
-        if (isCaptchaEnabled && !recaptchaToken) {
-            setPageError('Please complete the Captcha verification.');
-            setIsLoading(false);
-            return;
-        }
+            if (isCaptchaEnabled && !recaptchaToken) {
+                setPageError('Please complete the Captcha verification.');
+                return;
+            }
 
-        const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
-        const name = `${firstName} ${lastName}`.trim();
+            const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
+            const name = `${firstName} ${lastName}`.trim();
 
-        console.log("Submitting registration...");
-        const result = await register(name, email, password, password, phone, role, tokenToSend);
-        console.log("Registration Result:", result);
+            const result = await register(name, email, password, password, phone, 'USER', tokenToSend, pincode);
 
-        if (result.success) {
-            setSuccessMessage('Created successfully ✓');
-            // Clear form
-            setFirstName('');
-            setLastName('');
-            setEmail('');
-            setPhone('');
-            setPassword('');
+            if (result.success) {
+                setSuccessMessage('Created successfully ✓');
+                // Clear form
+                setFirstName('');
+                setLastName('');
+                setEmail('');
+                setPhone('');
+                setPassword('');
+                setPincode('');
 
-            setTimeout(() => {
-                const from = location.state?.from?.pathname;
-                if (from) {
-                    navigate(from, { replace: true });
-                } else {
-                    if (role === 'TECHNICIAN') {
-                        navigate('/technician/onboarding');
+                setTimeout(() => {
+                    const from = location.state?.from?.pathname;
+                    if (from) {
+                        navigate(from, { replace: true });
                     } else {
                         navigate('/bookings');
                     }
-                }
-            }, 1500);
-        } else {
-            setPageError(result.message || 'Registration failed. Please try again.');
-            if (recaptchaRef.current) recaptchaRef.current.reset();
-            setRecaptchaToken(null);
+                }, 1500);
+            } else {
+                setPageError(result.message || 'Registration failed. Please try again.');
+                if (recaptchaRef.current) recaptchaRef.current.reset();
+                setRecaptchaToken(null);
+            }
+        } catch (error) {
+            console.error("Register Error:", error);
+            setPageError("Something went wrong. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
+
     };
 
     return (
         <div ref={containerRef} className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
             {/* Left: Form */}
-            <div ref={formRef} className="flex flex-col justify-center px-8 sm:px-12 lg:px-20 bg-white dark:bg-slate-950 order-last lg:order-first">
-                <div className="w-full max-w-md mx-auto py-6">
+            <div ref={formRef} className="flex flex-col justify-center px-6 sm:px-8 lg:px-12 bg-white dark:bg-slate-950 order-last lg:order-first">
+                <div className="w-full max-w-sm mx-auto py-4">
+
                     <div className="mb-6 stagger-item">
                         <Link to="/" className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -194,7 +200,8 @@ const RegisterPage = () => {
                         )}
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4 stagger-item">
+                    <form onSubmit={handleSubmit} className="space-y-3 stagger-item">
+
                         <div className="grid grid-cols-2 gap-3">
                             <Input
                                 id="firstName"
@@ -204,6 +211,8 @@ const RegisterPage = () => {
                                 value={firstName}
                                 onChange={(e) => setFirstName(e.target.value)}
                                 required
+                                className="py-1.5"
+
                             />
                             <Input
                                 id="lastName"
@@ -213,6 +222,7 @@ const RegisterPage = () => {
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
                                 required
+                                className="py-1.5"
                             />
                         </div>
 
@@ -225,50 +235,37 @@ const RegisterPage = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
+                            className="py-1.5"
                         />
 
-                        {/* Role Selector */}
-                        <div className="mb-2">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">I am a</label>
-                            <div className="flex gap-3">
-                                <label className={`flex-1 border rounded-lg p-2 cursor-pointer transition-colors ${role === 'USER' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'}`}>
-                                    <div className="flex items-center gap-2 font-bold text-xs">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            value="USER"
-                                            checked={role === 'USER'}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            className="text-blue-600 focus:ring-blue-600"
-                                        />
-                                        Customer
-                                    </div>
-                                </label>
-                                <label className={`flex-1 border rounded-lg p-2 cursor-pointer transition-colors ${role === 'TECHNICIAN' ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'}`}>
-                                    <div className="flex items-center gap-2 font-bold text-xs">
-                                        <input
-                                            type="radio"
-                                            name="role"
-                                            value="TECHNICIAN"
-                                            checked={role === 'TECHNICIAN'}
-                                            onChange={(e) => setRole(e.target.value)}
-                                            className="text-blue-600 focus:ring-blue-600"
-                                        />
-                                        Technician
-                                    </div>
-                                </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                id="phone"
+                                label="Phone Number"
+                                placeholder="+91..."
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                required
+                                className="py-1.5"
+                            />
+                            <div className="relative group/pincode">
+                                <Input
+                                    id="pincode"
+                                    label="Pincode"
+                                    placeholder="123456"
+                                    type="text"
+                                    value="845438"
+                                    readOnly
+                                    className="py-1.5 bg-slate-100 dark:bg-slate-800 cursor-not-allowed text-slate-500"
+                                />
+                                <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-800 text-white text-xs rounded shadow-lg opacity-0 group-hover/pincode:opacity-100 transition-opacity pointer-events-none z-10">
+                                    Currently we only serve in 845438.
+                                    <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                                </div>
                             </div>
                         </div>
 
-                        <Input
-                            id="phone"
-                            label="Phone Number"
-                            placeholder="+91 123456789"
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            required
-                        />
 
                         <div>
                             <Input
@@ -280,6 +277,8 @@ const RegisterPage = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength={8}
+                                className="py-1.5"
+
                                 rightElement={
                                     <button
                                         type="button"
@@ -290,7 +289,8 @@ const RegisterPage = () => {
                                     </button>
                                 }
                             />
-                            <p className="text-xs text-slate-500 mt-1">
+                            <p className="text-[10px] text-slate-500 mt-1">
+
                                 Must be at least 8 characters.
                             </p>
                         </div>
@@ -310,7 +310,8 @@ const RegisterPage = () => {
 
                             <Button
                                 type="submit"
-                                className="w-full shadow-[0_8px_20px_rgba(37,99,235,0.25)] hover:-translate-y-px transition-transform duration-200"
+                                className="w-full shadow-lg hover:-translate-y-px transition-transform duration-200 py-2.5 text-sm"
+
                                 size="lg"
                                 disabled={isLoading}
                             >
@@ -364,10 +365,30 @@ const RegisterPage = () => {
 
                     <p className="mt-6 text-center text-sm text-slate-500 stagger-item">
                         Already have an account?{' '}
-                        <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700">
+                        <Link to="/login" className="font-semibold text-rose-600 hover:text-rose-700">
                             Sign in
                         </Link>
                     </p>
+                    <Link to="/partner/register" className="mt-8 relative group block overflow-hidden rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 p-4 transition-all hover:border-rose-500 dark:hover:border-rose-500 hover:shadow-xl hover:shadow-rose-500/10">
+                        <div className="flex items-center justify-between relative z-10">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                                        HIRING
+                                    </span>
+                                    <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-rose-600 transition-colors">Looking for work?</h3>
+                                </div>
+                                <p className="text-xs text-slate-500 group-hover:text-slate-600 dark:text-slate-400">
+                                    Join as a <span className="font-semibold text-slate-900 dark:text-white">Service Partner</span> & earn more
+                                </p>
+                            </div>
+
+                            <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-slate-800 group-hover:bg-rose-600 flex items-center justify-center text-slate-400 group-hover:text-white transition-all duration-300 shadow-sm group-hover:scale-110 group-hover:rotate-[-10deg]">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            </div>
+                        </div>
+                    </Link>
+
                 </div>
             </div>
 

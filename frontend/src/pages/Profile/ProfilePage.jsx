@@ -76,12 +76,14 @@ const ProfilePage = () => {
 
   const menuItems = [
     { icon: Heart, label: 'Saved Services', path: '/saved', color: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10' },
-    { icon: MapPin, label: 'My Addresses', path: '/addresses', color: 'text-blue-600 bg-blue-50 dark:bg-blue-500/10' },
+    { icon: MapPin, label: 'My Addresses', path: '/addresses', color: 'text-rose-600 bg-rose-50 dark:bg-rose-500/10' },
+
     { icon: CreditCard, label: 'Payment Methods', path: '/payments', color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-screen bg-transparent dark:bg-slate-950 transition-colors duration-300 relative overflow-hidden pb-20">
+
       {/* Background Dots */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#ffffff_1px,transparent_1px)] bg-size-[40px_40px] opacity-10 dark:opacity-5" />
@@ -107,7 +109,8 @@ const ProfilePage = () => {
                       e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'
                     }}
                   />
-                  <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900">
+                  <div className="absolute bottom-1 right-1 bg-rose-500 p-1 rounded-full border-2 border-white dark:border-slate-900">
+
                     <Check className="w-3 h-3 text-white stroke-[4px]" />
                   </div>
                 </div>
@@ -317,7 +320,8 @@ const ProfilePage = () => {
                       e.target.src = 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=100'
                     }}
                   />
-                  <div className="absolute bottom-1 right-1 bg-blue-500 p-1 rounded-full border-2 border-white dark:border-slate-900 shadow-lg">
+                  <div className="absolute bottom-1 right-1 bg-rose-500 p-1 rounded-full border-2 border-white dark:border-slate-900 shadow-lg">
+
                     <Check className="w-3 h-3 text-white stroke-[4px]" />
                   </div>
                 </div>
@@ -396,7 +400,8 @@ const ProfilePage = () => {
           {/* Preferences / Sound Effects */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+              <div className="w-11 h-11 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-600 dark:text-rose-400 shadow-sm">
+
                 <Volume2 className="w-5 h-5" />
               </div>
               <div>
@@ -525,13 +530,13 @@ const ProfilePage = () => {
             <div>
               <h3 className="text-slate-900 dark:text-white font-bold text-lg mb-4">Quick Links</h3>
               <ul className="space-y-3">
-                <li><Link to="/contact" className="text-slate-600 dark:text-slate-400 font-medium">About Us</Link></li>
+                <li><Link to="/about" className="text-slate-600 dark:text-slate-400 font-medium">About Us</Link></li>
                 <li><Link to="/services" className="text-slate-600 dark:text-slate-400 font-medium">Our Services</Link></li>
-                <li><Link to="/partner" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Become a Partner</Link></li>
                 <li>
-                  <Link to="/careers" className="text-slate-600 dark:text-slate-400 font-medium hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <Link to="/careers" className="text-slate-600 dark:text-slate-400 font-medium hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-2">
                     Careers
-                    <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase bg-indigo-50 dark:bg-indigo-900/20 px-1.5 py-0.5 rounded-md animate-pulse">
+                    <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase bg-rose-50 dark:bg-rose-900/20 px-1.5 py-0.5 rounded-md animate-pulse">
+
                       Soon
                     </span>
                   </Link>
@@ -546,15 +551,16 @@ const ProfilePage = () => {
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-rose-600 dark:text-rose-500 shrink-0 mt-0.5" />
-                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">123, Green Park, New Delhi, India 110016</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">Naya Bazar Chowk, Kali Bagh Colony, Bettiah, Bihar 845438</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-rose-600 dark:text-rose-500 shrink-0" />
-                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">+91 98765 43210</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">+91 92883 92886</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-rose-600 dark:text-rose-500 shrink-0" />
-                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">support@reservice.com</span>
+                  <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">support@reservice.in</span>
+
                 </li>
               </ul>
             </div>

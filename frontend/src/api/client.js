@@ -1,12 +1,24 @@
 import axios from 'axios';
 
 const client = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
+    baseURL: import.meta.env.VITE_API_URL || 'https://api.reservice.in/api/v1',
     withCredentials: true, // Important for cookies
     headers: {
         'Content-Type': 'application/json'
     },
 });
+
+// Request interceptor to attach token
+client.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
 // Response interceptor for global error handling
 client.interceptors.response.use(

@@ -12,7 +12,8 @@ const PartnerLandingPage = () => {
 
             {/* Hero Section */}
             <section className="relative pt-24 pb-12 px-6 overflow-hidden">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/4" />
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/4" />
+
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
                     <motion.div
@@ -20,12 +21,14 @@ const PartnerLandingPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <span className="inline-block px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-wider mb-6">
+                        <span className="inline-block px-4 py-1.5 rounded-full bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 font-bold text-xs uppercase tracking-wider mb-6">
+
                             Join Reservice Partners
                         </span>
                         <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white mb-6 leading-tight">
                             Grow Your Business <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-rose-400">
+
                                 On Your Terms
                             </span>
                         </h1>
@@ -37,13 +40,15 @@ const PartnerLandingPage = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                             <Link
                                 to="/partner/register"
-                                className="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                                className="w-full sm:w-auto px-8 py-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-rose-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+
                             >
                                 Become a Partner <ArrowRight className="w-5 h-5" />
                             </Link>
                             <Link
                                 to="/technician/login"
-                                className="text-slate-600 dark:text-slate-400 font-semibold hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                className="text-slate-600 dark:text-slate-400 font-semibold hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+
                             >
                                 Already a partner? Sign In
                             </Link>
@@ -74,7 +79,8 @@ const PartnerLandingPage = () => {
                 <div className="max-w-6xl mx-auto">
                     <div className="grid md:grid-cols-3 gap-8">
                         {[
-                            { icon: TrendingUp, title: "Zero Commission Period", desc: "Keep 100% of your earnings for the first 30 days. Transparent pricing afterwards." },
+                            { icon: TrendingUp, title: "Zero Commission Period", desc: "Keep 100% of your earnings for the first 15 days. Transparent pricing afterwards." },
+
                             { icon: Clock, title: "Flexible Schedule", desc: "You are the boss. Go online when you want to work, go offline when you need a break." },
                             { icon: Shield, title: "Insurance Cover", desc: "Accidental insurance coverage up to ₹5 Lakhs for all verified partners on active jobs." },
                         ].map((item, i) => (
@@ -84,7 +90,8 @@ const PartnerLandingPage = () => {
                                 whileHover={{ y: -5 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
+                                <div className="w-14 h-14 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-6">
+
                                     <item.icon className="w-7 h-7" />
                                 </div>
                                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
@@ -122,17 +129,19 @@ const PartnerLandingPage = () => {
 
             {/* CTA */}
             <section className="py-20 px-6">
-                <div className="max-w-4xl mx-auto bg-blue-600 rounded-[2.5rem] p-10 md:p-16 text-center text-white relative overflow-hidden">
+                <div className="max-w-4xl mx-auto bg-rose-600 rounded-[2.5rem] p-10 md:p-16 text-center text-white relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
 
                     <h2 className="text-3xl md:text-5xl font-black mb-6 relative z-10">Ready to earn more?</h2>
-                    <p className="text-blue-100 text-lg mb-10 max-w-xl mx-auto relative z-10 text-pretty">
+                    <p className="text-rose-100 text-lg mb-10 max-w-xl mx-auto relative z-10 text-pretty">
+
                         Join the fastest growing service network in the country. Download the app or register now to get started.
                     </p>
 
                     <Link
                         to="/partner/register"
-                        className="inline-block bg-white text-blue-600 px-10 py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-blue-50 transition-colors relative z-10"
+                        className="inline-block bg-white text-rose-600 px-10 py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-rose-50 transition-colors relative z-10"
+
                     >
                         Register as Partner
                     </Link>

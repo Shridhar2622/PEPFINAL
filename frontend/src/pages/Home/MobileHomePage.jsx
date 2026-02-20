@@ -1,88 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, ArrowRight, Star, Clock, Sparkles } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Star, Clock, Sparkles, Hotel, Car } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 // import { useAdmin } from '../../context/AdminContext';
 import MobileHeader from '../../components/mobile/MobileHeader';
 import MobileBottomNav from '../../components/mobile/MobileBottomNav';
-import MobileServiceDetail from '../../pages/Services/MobileServiceDetail';
+// import MobileServiceDetail from '../../pages/Services/MobileServiceDetail';
 import { useNavigate } from 'react-router-dom';
+import client from '../../api/client';
 
-const HERO_SLIDES = [
-  {
-    id: 1,
-    serviceId: 8, // Expert AC Repair
-    image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&q=80&w=600", // AC Repair
-    title: "Expert AC Repair",
-    subtitle: "Cooling solutions in minutes"
-  },
-  {
-    id: 2,
-    serviceId: 1, // Custom Carpentry
-    image: "https://images.unsplash.com/photo-1603533867307-b354255e3c32?auto=format&fit=crop&q=80&w=600", // Custom/Expert Carpentry
-    title: "Custom Carpentry",
-    subtitle: "Furniture repair & assembly"
-  },
-  {
-    id: 3,
-    serviceId: 4, // Electrical
-    image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=600", // Electrical
-    title: "Electrical Safety",
-    subtitle: "Certified electricians"
-  },
-  {
-    id: 4,
-    serviceId: 3, // Plumbing
-    image: "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?auto=format&fit=crop&q=80&w=600", // Plumbing
-    title: "Plumbing Pros",
-    subtitle: "Leak repairs & installation"
-  },
-  {
-    id: 5,
-    serviceId: 5, // Fridge
-    image: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=600", // Appliances
-    title: "Appliance Fixes",
-    subtitle: "Fridge, Washer & more"
-  },
-  {
-    id: 6,
-    serviceId: 6, // Transport
-    image: "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?auto=format&fit=crop&q=80&w=600", // Transport
-    title: "Safe Transport",
-    subtitle: "Cargo & Goods delivery"
-  },
-  {
-    id: 8,
-    serviceId: 32, // House Shifting
-    image: "https://images.unsplash.com/photo-1603803835816-35bb3a52b0df?auto=format&fit=crop&q=80&w=600",
-    title: "House Shifting",
-    subtitle: "Hassle-free relocation"
-  },
-  {
-    id: 7,
-    serviceId: 7, // Deep Cleaning
-    image: "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&q=80&w=600", // Deep Cleaning
-    title: "Deep Cleaning",
-    subtitle: "Spotless home guaranteed"
-  }
-];
+import ComingSoonModal from '../../components/common/ComingSoonModal';
 
 const MobileHomePage = ({ services = [], categories = [] }) => {
+  const [heroSlides, setHeroSlides] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
+
   const [selectedServiceId, setSelectedServiceId] = useState(null);
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [rotationIndex, setRotationIndex] = useState(0);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('All');
   const navigate = useNavigate();
-  // const { services, categories } = useAdmin(); // REMOVED: Props are passed now
+  const [comingSoonTitle, setComingSoonTitle] = useState(null);
+
+  // Fetch Hero Slides from Backend
+  useEffect(() => {
+    const fetchHeroes = async () => {
+      try {
+        const res = await client.get('/heroes/public');
+        if (res.data.status === 'success') {
+          setHeroSlides(res.data.data.heroes || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch heroes:", err);
+      }
+    };
+    fetchHeroes();
+  }, []);
 
   useEffect(() => {
+    if (heroSlides.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides]);
+
 
   // Auto-cycle categories scale effect (only if no filter selected)
   useEffect(() => {
@@ -119,32 +82,6 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
 
   const [activeCardId, setActiveCardId] = useState(null);
 
-  // Intersection Observer for Zoom & Rotating Border Effect
-  const observerRef = useRef(null);
-  useEffect(() => {
-    observerRef.current = new IntersectionObserver((entries) => {
-      // Only apply scroll-driven active class on mobile
-      if (window.innerWidth >= 768) return;
-
-      // Home-Specific: Elegant center capture for tall cards
-      const bestEntry = entries
-        .filter(e => e.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-      if (bestEntry && bestEntry.intersectionRatio > 0.15) {
-        const newId = bestEntry.target.dataset.id; // Keep as string
-        setActiveCardId(prev => (prev === newId ? prev : newId));
-      }
-    }, {
-      threshold: [0, 0.5, 1], // Reduced threshold density for performance
-      rootMargin: "-15% 0px -15% 0px"
-    });
-
-    const cards = document.querySelectorAll('.zoom-card');
-    cards.forEach(card => observerRef.current.observe(card));
-
-    return () => observerRef.current.disconnect();
-  }, [services]);
 
   const handleHeroClick = (slide) => {
     if (slide.serviceId) {
@@ -161,81 +98,78 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
   const displayedServices = React.useMemo(() => services.filter(s => s.isActive !== false).slice(0, 7), [services]);
 
   return (
-    <div className="min-h-screen bg-[#FFFBF5] dark:bg-slate-950 pb-24 font-sans">
-      <AnimatePresence>
-        {selectedServiceId && (
-          <MobileServiceDetail
-            service={services.find(s => s.id === selectedServiceId)}
-            onClose={() => setSelectedServiceId(null)}
-          />
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen bg-transparent dark:bg-slate-950 pb-24 font-sans">
+      {/* MobileServiceDetail removed as we navigate to page now */}
+
 
       <MobileHeader />
 
       <main className="relative px-2 pt-2">
         {/* Immersive Hero Section */}
-        <section
-          className="relative h-[65vh] w-full overflow-hidden rounded-[2.5rem] shadow-2xl z-0 cursor-pointer active:scale-[0.98] transition-all duration-300"
-          onClick={() => handleHeroClick(HERO_SLIDES[currentSlide])}
-        >
-          <AnimatePresence mode="popLayout">
-            <motion.img
-              key={currentSlide}
-              src={HERO_SLIDES[currentSlide].image}
-              alt="Hero"
-              className="absolute inset-0 w-full h-full object-cover"
-              initial={{ scale: 1.1, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.5 }}
-            />
-          </AnimatePresence>
-
-          {/* Overlay Gradient */}
-          <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
-
-          {/* Hero Content */}
-          <div className="absolute bottom-0 left-0 w-full p-6 pb-12 flex flex-col gap-2 z-10">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <span className="inline-block px-3 py-1 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-3 shadow-lg shadow-rose-500/30">
-                Premium Services
-              </span>
-              <h1 className="text-4xl font-black text-white leading-none mb-2 tracking-tight">
-                {HERO_SLIDES[currentSlide].title}
-              </h1>
-              <p className="text-slate-200 text-lg font-medium opacity-90">
-                {HERO_SLIDES[currentSlide].subtitle}
-              </p>
-            </motion.div>
-
-            {/* Glassmorphic Search Bar */}
-            <motion.div
-              className="mt-6 relative"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent hero click
-                navigate('/search');
-              }}
-            >
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-slate-400" />
-              </div>
-              <input
-                type="text"
-                readOnly
-                className="block w-full pl-11 pr-4 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-medium text-sm shadow-xl cursor-text"
-                placeholder="What can we help you with?"
+        {heroSlides.length > 0 && (
+          <section
+            className="relative h-[65vh] w-full overflow-hidden rounded-[2.5rem] shadow-2xl z-0 cursor-pointer active:scale-[0.98] transition-all duration-300"
+            onClick={() => handleHeroClick(heroSlides[currentSlide])}
+          >
+            <AnimatePresence mode="popLayout">
+              <motion.img
+                key={currentSlide}
+                src={heroSlides[currentSlide]?.image}
+                alt="Hero"
+                className="absolute inset-0 w-full h-full object-cover"
+                initial={{ scale: 1.1, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.5 }}
               />
-            </motion.div>
-          </div>
-        </section>
+            </AnimatePresence>
+
+            {/* Overlay Gradient */}
+            <div className="absolute inset-0 bg-linear-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
+
+            {/* Hero Content */}
+            <div className="absolute bottom-0 left-0 w-full p-6 pb-12 flex flex-col gap-2 z-10">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                <span className="inline-block px-3 py-1 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full mb-3 shadow-lg shadow-rose-500/30">
+                  Premium Services
+                </span>
+                <h1 className="text-4xl font-black text-white leading-none mb-2 tracking-tight">
+                  {heroSlides[currentSlide]?.title}
+                </h1>
+                <p className="text-slate-200 text-lg font-medium opacity-90">
+                  {heroSlides[currentSlide]?.subtitle}
+                </p>
+              </motion.div>
+
+              {/* Glassmorphic Search Bar */}
+              <motion.div
+                className="mt-6 relative"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent hero click
+                  navigate('/search');
+                }}
+              >
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  readOnly
+                  className="block w-full pl-11 pr-4 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all font-medium text-sm shadow-xl cursor-text"
+                  placeholder="What can we help you with?"
+                />
+              </motion.div>
+            </div>
+          </section>
+        )}
+
 
         {/* Categories Grid */}
         <section className="px-5 -mt-8 relative z-10">
@@ -287,9 +221,94 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
           </motion.div>
         </section>
 
-        {/* Popular Services - Restored Large Cards & Zoom Effect */}
-        <section className="px-5 mt-8 pb-4">
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+        {/* Other Services Section (New) */}
+        <section className="px-5 mt-8">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-4 px-1">
+            Other Services
+          </h3>
+          <div className="flex flex-col gap-4">
+            {/* Reservice Hotels Card */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setComingSoonTitle("Reservice Hotels")}
+              className="relative bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-800 overflow-hidden cursor-pointer group"
+            >
+              {/* Background Gradient & Pattern */}
+              <div className="absolute inset-0 bg-linear-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 opacity-50" />
+              <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hoover:scale-110 transition-transform duration-300">
+                  <Hotel className="w-7 h-7" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-bold text-lg text-slate-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    Reservice Hotels
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Premium stays & accommodation</p>
+                </div>
+
+                {/* Premium Glassmorphic Badge */}
+                <div className="ml-auto bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-rose-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider relative z-10">Soon</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Reservice Go Cabs Card */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setComingSoonTitle("Reservice Go Cabs & Transport")}
+              className="relative bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-slate-800 overflow-hidden cursor-pointer group"
+            >
+              {/* Background Gradient & Pattern */}
+              <div className="absolute inset-0 bg-linear-to-r from-amber-50 to-white dark:from-slate-800 dark:to-slate-900 opacity-50" />
+              <div className="absolute right-0 top-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+              {/* Animation: Moving Car */}
+              <motion.div
+                initial={{ x: -50 }}
+                animate={{ x: 400 }}
+                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-2 left-0 z-0"
+              >
+                <Car className="w-16 h-16 text-amber-500/20 dark:text-amber-500/30 filter drop-shadow-sm" />
+              </motion.div>
+
+              <div className="relative z-10 flex items-center gap-4">
+                <div className="w-14 h-14 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform duration-300">
+                  <Car className="w-7 h-7" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-bold text-lg text-slate-900 dark:text-white leading-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                    Go Cabs & Transport
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Reliable rides & logistics</p>
+                </div>
+
+                {/* Premium Glassmorphic Badge */}
+                <div className="ml-auto bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/30 dark:border-white/10 px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg shadow-rose-500/10 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider relative z-10">Soon</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Popular Services - Scroll-Linked Animation */}
+        <section className="px-3 mt-8 pb-4">
+          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mb-5 flex items-center gap-2 px-2">
+
             <Sparkles className="w-5 h-5 text-amber-400 fill-current" />
             Top Rated Services
           </h2>
@@ -298,20 +317,35 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
             {displayedServices.map((service, idx) => {
               const uniqueKey = service.id || service._id || idx;
               return (
-                <div
+                <motion.div
                   key={uniqueKey}
-                  data-id={uniqueKey}
-                  onClick={() => setSelectedServiceId(service._id || service.id)}
-                  className={`zoom-card relative rounded-4xl ring-1 ring-transparent dark:ring-white/5 transition-all duration-300 transform rotating-border-home ${String(activeCardId) === String(service._id || service.id) ? 'active scale-[1.02] shadow-2xl' : 'scale-100 shadow-md'} cursor-pointer active:scale-[0.98] mb-8`}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  whileInView={{
+                    opacity: 1,
+                    scale: 1,
+                    transition: {
+                      type: "spring",
+                      bounce: 0.4,
+                      duration: 0.8
+                    }
+                  }}
+                  viewport={{ once: true, margin: "-10%" }}
+                  onClick={() => navigate(`/services/${service._id || service.id}`)}
+                  className={`zoom-card rotating-border-home relative rounded-4xl cursor-pointer mb-8 group`}
+                  style={{
+                    '--border-color-1': '#f43f5e', // Rose 500
+                    '--border-color-2': '#fbbf24', // Amber 400
+                    '--glow-color': 'rgba(244, 63, 94, 0.4)'
+                  }}
                 >
-                  {/* Inner Content Wrapper */}
-                  <div className="rounded-4xl overflow-hidden w-full h-full relative z-10 bg-white dark:bg-slate-900 isolation-isolate">
+                  <div className="rounded-4xl overflow-hidden w-full h-full relative z-10 bg-white dark:bg-slate-900 shadow-xl dark:shadow-slate-900/50 border border-rose-100 dark:border-rose-500/20">
                     {/* Image Section */}
-                    <div className="h-56 relative overflow-hidden rounded-t-4xl">
+                    <div className="h-72 relative overflow-hidden rounded-t-4xl">
                       <img
-                        src={service.image}
+                        src={service.headerImage || service.image || 'https://images.unsplash.com/photo-1581578731117-104f2a41d58e?auto=format&fit=crop&q=80'}
                         alt={service.title}
-                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out ${activeCardId === service.id ? 'scale-110' : 'scale-100'}`}
+                        className={`w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110`}
+
                       />
                       <div className="absolute top-0 inset-x-0 h-16 bg-linear-to-b from-black/50 to-transparent"></div>
                       <div className="absolute top-5 left-5">
@@ -319,18 +353,19 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                           Best Seller
                         </span>
                       </div>
-                      <div className="absolute top-5 right-5 w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white">
-                        <Star className="w-4 h-4 text-amber-400 fill-current" />
-                      </div>
+                      {/* Removed Star from top right as requested */}
                     </div>
 
                     {/* Text Content */}
-                    <div className="p-5">
+                    <div className="p-6">
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-xl font-extrabold text-gray-900 dark:text-white leading-tight">{service.title}</h3>
-                        <div className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-sm">
-                          {service.rating} <Star className="w-2.5 h-2.5 fill-current" />
-                        </div>
+                        <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">{service.title}</h3>
+                        {service.rating > 0 && (
+                          <div className="bg-green-700 text-white text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5 shadow-sm">
+                            {service.rating}
+                          </div>
+                        )}
+
                       </div>
                       <div className="flex items-start gap-1.5 text-[11px] font-bold text-gray-500 dark:text-slate-400 mb-4 uppercase tracking-wide">
                         <Clock className="w-3.5 h-3.5" />
@@ -342,15 +377,17 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
                       <div className="flex items-center justify-between border-t border-dashed border-gray-100 dark:border-slate-800 pt-4">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-gray-400 dark:text-slate-500 font-bold uppercase line-through">₹{service.price + 300}</span>
-                          <span className="text-lg font-black text-gray-900 dark:text-white">₹{service.price}</span>
+                          <span className="text-2xl font-black text-gray-900 dark:text-white">₹{service.price}</span>
                         </div>
-                        <button className="bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide hover:bg-rose-600 hover:text-white transition-colors">
+                        <button className="bg-rose-600 text-white px-8 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/25 active:scale-95">
+
                           Book Now
                         </button>
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
+
               );
             })}
           </div>
@@ -358,6 +395,12 @@ const MobileHomePage = ({ services = [], categories = [] }) => {
       </main>
 
       <MobileBottomNav />
+      <ComingSoonModal
+        isOpen={!!comingSoonTitle}
+        onClose={() => setComingSoonTitle(null)}
+        title={comingSoonTitle}
+      />
+
     </div >
   );
 };

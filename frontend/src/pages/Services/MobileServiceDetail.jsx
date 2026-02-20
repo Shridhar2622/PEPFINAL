@@ -97,7 +97,8 @@ const MobileServiceDetail = ({ service, onClose }) => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed inset-0 z-60 bg-white dark:bg-slate-950 flex flex-col"
+            className="fixed inset-0 z-60 bg-[#FCFAF2] dark:bg-slate-950 flex flex-col"
+
         >
             {/* Header */}
             <div className="relative h-64 overflow-hidden">
@@ -127,7 +128,8 @@ const MobileServiceDetail = ({ service, onClose }) => {
                         <div className="space-y-1.5 mb-2">
                             <p className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">About this service</p>
                             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed transition-colors">
-                                {service.description || "High-quality professional service tailored to your specific needs. Our verified experts ensure the best results with a 30-day warranty."}
+                                {service.description || "High-quality professional service tailored to your specific needs. Our verified experts ensure the best results with a 15-day warranty."}
+
                             </p>
                         </div>
                     </div>
@@ -232,7 +234,8 @@ const MobileServiceDetail = ({ service, onClose }) => {
                         <ul className="space-y-3">
                             <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 font-bold">
                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                                30-day warranty on all services
+                                15-day warranty on all services
+
                             </li>
                             <li className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 font-bold">
                                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-600" />

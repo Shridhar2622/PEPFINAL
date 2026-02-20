@@ -7,20 +7,28 @@ import { motion } from 'framer-motion';
 const AdminLoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const { login } = useAdmin();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const [isLoading, setIsLoading] = useState(false);
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        const result = await login(email, password);
-        if (result === true) {
-            const from = location.state?.from?.pathname || '/admin/dashboard';
-            navigate(from, { replace: true });
-        } else {
-            setError(typeof result === 'string' ? result : 'Invalid administrative credentials');
+        setIsLoading(true);
+
+        try {
+            const result = await login(email, password);
+            if (result === true) {
+                const from = location.state?.from?.pathname || '/admin/dashboard';
+                navigate(from, { replace: true });
+            } else {
+                setError(typeof result === 'string' ? result : 'Invalid administrative credentials');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
+
         }
     };
 
@@ -32,7 +40,8 @@ const AdminLoginPage = () => {
                 className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-white dark:border-slate-800 overflow-hidden shadow-indigo-500/10 dark:shadow-indigo-900/20"
             >
                 <div className="p-8 pb-4 text-center">
-                    <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/30">
+                    <div className="w-16 h-16 bg-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-rose-500/30">
+
                         <Shield className="w-8 h-8 text-white" />
                     </div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white">Admin Access</h1>
@@ -77,9 +86,15 @@ const AdminLoginPage = () => {
 
                     <button
                         type="submit"
-                        className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        disabled={isLoading}
+                        className="w-full py-4 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl font-black shadow-xl shadow-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Sign In <ArrowRight className="w-5 h-5" />
+                        {isLoading ? 'Verifying...' : (
+                            <>
+                                Sign In <ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
+
                     </button>
 
                     <p className="text-center text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">

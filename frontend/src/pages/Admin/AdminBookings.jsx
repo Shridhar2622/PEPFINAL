@@ -59,29 +59,21 @@ const AdminBookings = () => {
     };
 
     const getFilteredTechnicians = (booking) => {
-        const bookingCatId = booking.category?._id || booking.category?.id;
-        const bookingCatName = booking.category?.name?.toLowerCase();
+        const bookingServiceId = booking.service?._id || booking.service?.id || booking.service;
 
         return technicians.filter(t => {
             if (t.documents?.verificationStatus !== 'VERIFIED') return false;
-            if (t.user?.isActive === false) return false; // Exclude blocked users
+            if (t.user?.isActive === false) return false;
 
-            // 1. Strict Category ID Match
-            // Handle both populated object and ID string
-            const hasCategory = t.categories?.some(cat => {
-                const cId = cat._id || cat.id || cat; // Handle object or string
-                return cId && String(cId) === String(bookingCatId);
+            // STRICT ROLE MATCHING: Only show technicians assigned to the specific service
+            // This ensures "Premium AC" techs don't show up for "Basic AC" and vice versa.
+            const hasServiceRole = t.services?.some(s => {
+                const sId = s._id || s.id || s;
+                return sId && String(sId) === String(bookingServiceId);
             });
 
-            if (hasCategory) return true;
+            return hasServiceRole;
 
-            // 2. Fallback: Check by Skills string ONLY if technician has NO assigned categories
-            // This ensures that once categories are set by an admin, they are strictly followed.
-            if ((!t.categories || t.categories.length === 0) && bookingCatName) {
-                if (t.skills?.some(skill => skill.toLowerCase().includes(bookingCatName))) return true;
-            }
-
-            return false;
         }).sort((a, b) => {
             // Sort Online first
             if (a.isOnline && !b.isOnline) return -1;
@@ -92,13 +84,14 @@ const AdminBookings = () => {
 
     const StatusBadge = ({ status }) => {
         const styles = {
-            'PENDING': 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200 dark:border-amber-500/20',
-            'ASSIGNED': 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-500/20',
-            'ACCEPTED': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20',
-            'IN_PROGRESS': 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 border-purple-200 dark:border-purple-500/20',
-            'COMPLETED': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
-            'CANCELLED': 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border-rose-200 dark:border-rose-500/20',
-            'REJECTED': 'bg-slate-100 text-slate-700 dark:bg-slate-500/10 dark:text-slate-400 border-slate-200 dark:border-slate-500/20',
+            'PENDING': 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
+            'ASSIGNED': 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-blue-200 dark:border-blue-500/30',
+            'ACCEPTED': 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30',
+            'IN_PROGRESS': 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border-purple-200 dark:border-purple-500/30',
+            'COMPLETED': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30',
+            'CANCELLED': 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300 border-rose-200 dark:border-rose-500/30',
+            'REJECTED': 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300 border-slate-200 dark:border-slate-500/30',
+
         };
 
         return (
@@ -109,10 +102,11 @@ const AdminBookings = () => {
     };
 
     const DetailRow = ({ label, value, icon: Icon }) => (
-        <div className="flex items-start gap-3 py-3 border-b border-indigo-50 dark:border-slate-800 last:border-0">
-            {Icon && <Icon className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />}
+        <div className="flex items-start gap-3 py-3 border-b border-indigo-50 dark:border-slate-700 last:border-0">
+            {Icon && <Icon className="w-5 h-5 text-indigo-500 dark:text-indigo-400 mt-0.5 shrink-0" />}
             <div>
-                <p className="text-xs font-bold text-indigo-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
+                <p className="text-xs font-bold text-indigo-400 dark:text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{value || 'N/A'}</p>
             </div>
         </div>
@@ -144,7 +138,8 @@ const AdminBookings = () => {
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-8 py-2.5 rounded-xl text-sm font-black transition-all duration-300 uppercase tracking-wider ${activeTab === tab
                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none'
-                                    : 'text-slate-400 hover:text-indigo-600'
+                                    : 'text-slate-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400'
+
                                     }`}
                             >
                                 {tab}
@@ -176,13 +171,14 @@ const AdminBookings = () => {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
-                                        <tr className="bg-slate-50 dark:bg-slate-800/50">
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Service & ID</th>
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Customer</th>
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Technician</th>
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Revenue</th>
-                                            <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                                        <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700">
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Service & ID</th>
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Customer</th>
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Technician</th>
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Status</th>
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest">Revenue</th>
+                                            <th className="px-6 py-5 text-xs font-black text-slate-400 dark:text-slate-400 uppercase tracking-widest text-right">Actions</th>
+
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -191,12 +187,13 @@ const AdminBookings = () => {
                                                 <tr key={booking._id} className="hover:bg-indigo-50/20 dark:hover:bg-indigo-500/5 transition-colors group">
                                                     <td className="px-6 py-5">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
-                                                                <Tag className="w-5 h-5 text-indigo-600" />
+                                                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-slate-700">
+                                                                <Tag className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                                                             </div>
                                                             <div>
                                                                 <p className="font-black text-slate-900 dark:text-white text-sm uppercase">
-                                                                    {booking.category?.name || 'Service'}
+                                                                    {booking.service?.title || booking.category?.name || 'Service'}
+
                                                                 </p>
                                                                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 tracking-tighter uppercase">
                                                                     #{booking._id.slice(-8)}
@@ -205,17 +202,19 @@ const AdminBookings = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-5">
-                                                        <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                                                        <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">
                                                             {booking.customer?.name || 'Guest'}
                                                         </p>
-                                                        <p className="text-[10px] text-slate-400">{booking.customer?.phone || booking.customer?.email}</p>
+                                                        <p className="text-[10px] text-slate-400 dark:text-slate-500">{booking.customer?.phone || booking.customer?.email}</p>
+
                                                     </td>
                                                     <td className="px-6 py-5">
                                                         {booking.technician && reassigningId !== booking._id ? (
                                                             <div className="flex items-center justify-between gap-2 group/tech flex-1">
                                                                 <div className="flex items-center gap-2">
                                                                     <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                                                                        <UserCheck className="w-3 h-3 text-indigo-600" />
+                                                                        <UserCheck className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+
                                                                     </div>
                                                                     <p className="font-bold text-slate-700 dark:text-slate-300 text-sm">
                                                                         {booking.technician.name}
@@ -226,27 +225,30 @@ const AdminBookings = () => {
                                                                         <button
                                                                             onClick={() => setReassigningId(booking._id)}
                                                                             title="Reassign Expert"
-                                                                            className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-indigo-600 rounded-lg transition-colors"
+                                                                            className="p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-lg transition-colors"
                                                                         >
                                                                             <RefreshCw className="w-3 h-3" />
                                                                         </button>
-                                                                        <button
-                                                                            onClick={async () => {
-                                                                                if (window.confirm("Are you sure you want to unassign this expert?")) {
-                                                                                    setActionLoading(prev => ({ ...prev, [booking._id]: true }));
-                                                                                    try {
-                                                                                        await assignTechnician(booking._id, null);
-                                                                                        toast.success("Expert unassigned successfully");
-                                                                                    } finally {
-                                                                                        setActionLoading(prev => ({ ...prev, [booking._id]: false }));
+                                                                        {['PENDING', 'ASSIGNED'].includes(booking.status) && (
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    if (window.confirm("Are you sure you want to unassign this expert?")) {
+                                                                                        setActionLoading(prev => ({ ...prev, [booking._id]: true }));
+                                                                                        try {
+                                                                                            await assignTechnician(booking._id, null);
+                                                                                            toast.success("Expert unassigned successfully");
+                                                                                        } finally {
+                                                                                            setActionLoading(prev => ({ ...prev, [booking._id]: false }));
+                                                                                        }
                                                                                     }
-                                                                                }
-                                                                            }}
-                                                                            title="Unassign Expert"
-                                                                            className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 rounded-lg transition-colors"
-                                                                        >
-                                                                            <UserMinus className="w-3 h-3" />
-                                                                        </button>
+                                                                                }}
+                                                                                title="Unassign Expert"
+                                                                                className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg transition-colors"
+                                                                            >
+                                                                                <UserMinus className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
+
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -263,7 +265,8 @@ const AdminBookings = () => {
                                                             ) : (
                                                                 <div className="flex items-center gap-2">
                                                                     <select
-                                                                        className="text-[10px] font-black p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none flex-1"
+                                                                        className="text-[10px] font-black p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none flex-1 dark:text-white"
+
                                                                         value={selectedTechs[booking._id] || ""}
                                                                         onChange={(e) => setSelectedTechs(prev => ({ ...prev, [booking._id]: e.target.value }))}
                                                                         disabled={actionLoading[booking._id]}
@@ -324,7 +327,8 @@ const AdminBookings = () => {
                                                         <div className="flex items-center justify-end gap-2">
                                                             <button
                                                                 onClick={() => setSelectedBooking(booking)}
-                                                                className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
+                                                                className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-indigo-600 hover:text-white rounded-lg transition-all dark:hover:bg-indigo-500"
+
                                                                 title="View Details"
                                                             >
                                                                 <ExternalLink className="w-4 h-4" />
@@ -334,12 +338,14 @@ const AdminBookings = () => {
                                                             {['IN_PROGRESS', 'ACCEPTED'].includes(booking.status) && (
                                                                 <div className="relative flex items-center gap-1">
                                                                     {showPinInput === booking._id ? (
-                                                                        <div className="absolute right-0 top-0 mt-[-40px] flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-bottom-2">
+                                                                        <div className="absolute right-0 top-0 mt-[-40px] flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 animate-in fade-in slide-in-from-bottom-2">
+
                                                                             <input
                                                                                 type="text"
                                                                                 placeholder="Happy Pin"
                                                                                 maxLength={6}
-                                                                                className="w-24 p-2 text-[10px] font-black border border-slate-200 dark:border-slate-700 rounded-lg outline-none bg-slate-50 dark:bg-slate-900"
+                                                                                className="w-24 p-2 text-[10px] font-black border border-slate-200 dark:border-slate-700 rounded-lg outline-none bg-slate-50 dark:bg-slate-800 dark:text-white"
+
                                                                                 value={pinInputs[booking._id] || ''}
                                                                                 onChange={(e) => setPinInputs({ ...pinInputs, [booking._id]: e.target.value })}
                                                                             />
@@ -371,7 +377,8 @@ const AdminBookings = () => {
                                                                     ) : (
                                                                         <button
                                                                             onClick={() => setShowPinInput(booking._id)}
-                                                                            className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
+                                                                            className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:text-white rounded-lg transition-all"
+
                                                                             title="Verify & Complete (with Happy Pin)"
                                                                         >
                                                                             <Zap className="w-4 h-4" />
@@ -385,7 +392,8 @@ const AdminBookings = () => {
                                                                                 await updateBookingStatus(booking._id, 'COMPLETED');
                                                                             }
                                                                         }}
-                                                                        className="p-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all opacity-40 hover:opacity-100"
+                                                                        className="p-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white dark:hover:text-white rounded-lg transition-all opacity-40 hover:opacity-100"
+
                                                                         title="Force Complete (Bypass Pin)"
                                                                     >
                                                                         <CheckCircle2 className="w-4 h-4" />
@@ -408,9 +416,10 @@ const AdminBookings = () => {
                                         ) : (
                                             <tr>
                                                 <td colSpan="6" className="px-6 py-20 text-center">
-                                                    <div className="flex flex-col items-center gap-3 opacity-20">
-                                                        <Layout className="w-12 h-12" />
-                                                        <p className="font-black text-sm uppercase tracking-widest">No matching registry found</p>
+                                                    <div className="flex flex-col items-center gap-3 opacity-20 dark:opacity-40">
+                                                        <Layout className="w-12 h-12 text-slate-400 dark:text-slate-600" />
+                                                        <p className="font-black text-sm uppercase tracking-widest text-slate-400 dark:text-slate-500">No matching registry found</p>
+
                                                     </div>
                                                 </td>
                                             </tr>
@@ -426,17 +435,19 @@ const AdminBookings = () => {
             {/* Detail Modal Overlay */}
             <AnimatePresence>
                 {selectedBooking && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-950/40 backdrop-blur-sm">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-950/60 backdrop-blur-sm">
+
                         <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]"
+                            className="bg-white dark:bg-slate-950 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]"
                         >
                             {/* Modal Header */}
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-indigo-600 rounded-xl">
+                                    <div className="p-3 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30">
+
                                         <Tag className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
@@ -450,17 +461,19 @@ const AdminBookings = () => {
                                 </div>
                                 <button
                                     onClick={() => setSelectedBooking(null)}
-                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent dark:hover:border-slate-700"
+
                                 >
                                     <X className="w-5 h-5 text-slate-400" />
                                 </button>
                             </div>
 
                             {/* Modal Content */}
-                            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-white dark:bg-slate-950">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Client Profile */}
-                                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-4">
+
                                         <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                                             <img
                                                 src={selectedBooking.customer?.profilePhoto?.startsWith('http') ? selectedBooking.customer.profilePhoto : `/uploads/users/${selectedBooking.customer?.profilePhoto || 'default.jpg'}`}
@@ -478,7 +491,8 @@ const AdminBookings = () => {
                                     </div>
 
                                     {/* Expert Profile */}
-                                    <div className="p-6 bg-slate-50 dark:bg-slate-800/40 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-100 dark:border-slate-800 space-y-4">
+
                                         <div className="flex items-center gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
                                             <div className="relative">
                                                 <img
@@ -509,7 +523,8 @@ const AdminBookings = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-indigo-50/50 dark:bg-indigo-500/5 rounded-2xl p-6 border border-indigo-100 dark:border-indigo-500/10 grid grid-cols-2 gap-4">
+                                <div className="bg-indigo-50/50 dark:bg-indigo-500/10 rounded-2xl p-6 border border-indigo-100 dark:border-indigo-500/20 grid grid-cols-2 gap-4">
+
                                     <div>
                                         <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Status Code</p>
                                         <StatusBadge status={selectedBooking.status} />
@@ -525,7 +540,8 @@ const AdminBookings = () => {
                                         <h3 className="text-[10px] font-black text-rose-500 uppercase tracking-widest flex items-center gap-2">
                                             <AlertCircle className="w-3.5 h-3.5" /> Billing Exception Reason
                                         </h3>
-                                        <p className="p-4 bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-400 italic">
+                                        <p className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-400 italic">
+
                                             "{selectedBooking.extraReason}"
                                         </p>
                                     </div>
@@ -533,10 +549,11 @@ const AdminBookings = () => {
 
                                 {selectedBooking.technicianNote && (
                                     <div className="space-y-2">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                             <Edit3 className="w-3.5 h-3.5" /> Field Technician Notes
                                         </h3>
-                                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs text-slate-600 dark:text-slate-300 leading-relaxed border border-slate-100 dark:border-slate-800">
+
                                             {selectedBooking.technicianNote}
                                         </div>
                                     </div>
@@ -544,7 +561,8 @@ const AdminBookings = () => {
 
                                 {selectedBooking.partImages && selectedBooking.partImages.length > 0 && (
                                     <div className="space-y-3">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+
                                             <ImageIcon className="w-3.5 h-3.5" /> Proof of Completion
                                         </h3>
                                         <div className="grid grid-cols-2 gap-3">
@@ -577,8 +595,9 @@ const AdminBookings = () => {
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="p-5 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 text-center">
-                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                            <div className="p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 text-center text-slate-400 dark:text-slate-600">
+                                <p className="text-[9px] font-black uppercase tracking-widest">
+
                                     Reservice Internal Auditor v2.0
                                 </p>
                             </div>

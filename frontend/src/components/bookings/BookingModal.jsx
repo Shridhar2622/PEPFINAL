@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Calendar, Loader2, FileText, MapPin, CheckCircle, Image as ImageIcon } from 'lucide-react';
+import { X, Calendar, Loader2, FileText, MapPin, CheckCircle, Image as ImageIcon, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import Button from '../common/Button';
 import Input from '../common/Input';
 
 const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
-    const { user, updateProfile } = useUser();
+    const { user, addresses } = useUser();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // Address Selection State
+    // 'profile', 'saved_ID', 'manual'
+    const [addressMode, setAddressMode] = useState('profile');
+    const [manualAddress, setManualAddress] = useState('');
+
     const [formData, setFormData] = useState({
         date: '',
         description: '',
-        address: user?.address || '',
-        pickupLocation: user?.address || '',
+        address: '', // Will be derived from mode on submit
+        pickupLocation: '',
         dropLocation: ''
     });
     const [selectedFile, setSelectedFile] = useState(null);
@@ -44,34 +50,47 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
         }
     };
 
-    // Reset success state and file when modal opens/closes
-    React.useEffect(() => {
-        if (!isOpen) {
+    // Reset state when modal opens
+    useEffect(() => {
+        if (isOpen) {
             setIsSuccess(false);
             setSelectedFile(null);
             setFormData(prev => ({
                 ...prev,
                 date: '',
                 description: '',
-                dropLocation: ''
+                dropLocation: '',
+                pickupLocation: ''
             }));
-        }
-    }, [isOpen]);
 
-    // Update address if user data loads
-    React.useEffect(() => {
-        if (user?.address && !formData.address) {
-            setFormData(prev => ({
-                ...prev,
-                address: user.address,
-                pickupLocation: prev.pickupLocation || user.address
-            }));
+            // Default to profile address if available, else manual
+            if (user?.address) {
+                setAddressMode('profile');
+            } else if (addresses && addresses.length > 0) {
+                setAddressMode(`saved_${addresses[0].id}`);
+            } else {
+                setAddressMode('manual');
+            }
+            setManualAddress('');
         }
-    }, [user, isOpen, formData.address]);
+    }, [isOpen, user, addresses]);
 
     if (!isOpen || !service) return null;
 
     const isShiftingOrTransport = service.category === 'houseshifting' || service.category === 'transport';
+
+    const getFinalAddress = () => {
+        if (isShiftingOrTransport) return null; // Handled by pickup/drop
+
+        if (addressMode === 'profile') return user?.address;
+        if (addressMode === 'manual') return manualAddress;
+        if (addressMode.startsWith('saved_')) {
+            const id = parseInt(addressMode.split('_')[1]);
+            const saved = addresses.find(a => a.id === id);
+            return saved ? (saved.address || saved.value) : ''; // Handle various address object structures
+        }
+        return '';
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -99,35 +118,32 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
 
         setIsLoading(true);
 
-
         try {
-            // Enforce Address & Pincode for Booking
-            if (!formData.address) {
-                const newAddress = prompt('Address is mandatory for booking. Please enter your address:');
-                if (!newAddress) {
-                    alert('Booking cannot proceed without an address.');
+            // Determine Address
+            let finalBookingAddress = '';
+
+            if (!isShiftingOrTransport) {
+                finalBookingAddress = getFinalAddress();
+
+                if (!finalBookingAddress) {
+                    alert('Please select or enter a valid address.');
                     setIsLoading(false);
                     return;
                 }
-                // Update local state immediately
-                setFormData(prev => ({ ...prev, address: newAddress, pickupLocation: newAddress }));
-
-                // Update Profile in Background
-                await updateProfile({ address: newAddress });
-
-                // Update user object locally for this booking context if needed (though Context should handle it)
-                formData.address = newAddress;
-                // pickupLocation fallback
-                if (!formData.pickupLocation) formData.pickupLocation = newAddress;
-            } else if (!user?.address && formData.address) {
-                // If user has input address in form but profile doesn't have it, verify and save
-                await updateProfile({ address: formData.address });
+            } else {
+                // For shifting, validate pickup/drop
+                if (!formData.pickupLocation || !formData.dropLocation) {
+                    alert('Pickup and Drop locations are required.');
+                    setIsLoading(false);
+                    return;
+                }
             }
 
             // Create sanitized booking data
             const bookingData = {
                 ...formData,
-                categoryId: service.categoryId, // Pass categoryId if available
+                address: finalBookingAddress, // Explicitly set the resolved address
+                categoryId: service.categoryId,
                 serviceId: service.id || service._id || service.serviceId,
                 serviceName: service.title,
                 price: service.price,
@@ -141,8 +157,6 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
 
             const result = await onConfirm(bookingData);
 
-            // CRITICAL: Only show success if onConfirm returns successfully (no exception)
-            // and we have a valid result from the backend
             if (result) {
                 setIsSuccess(true);
             } else {
@@ -150,7 +164,6 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
             }
         } catch (err) {
             console.error("Submission error:", err);
-            // Error toast is handled by context
         } finally {
             setIsLoading(false);
         }
@@ -158,11 +171,11 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-md shadow-[0_20px_70px_rgba(0,0,0,0.3)] p-8 relative animate-in zoom-in-95 duration-300 border border-white/20">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] w-full max-w-md shadow-[0_20px_70px_rgba(0,0,0,0.3)] p-8 relative animate-in zoom-in-95 duration-300 border border-white/20 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 {!isSuccess && (
                     <button
                         onClick={onClose}
-                        className="absolute top-6 right-6 p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-400 hover:text-slate-600 active:scale-90"
+                        className="absolute top-6 right-6 p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-400 hover:text-slate-600 active:scale-90 z-10"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -202,15 +215,69 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
                                         required
                                     />
 
+                                    {/* Address Selection Section */}
                                     {!isShiftingOrTransport && (
-                                        <Input
-                                            label="Service Address"
-                                            placeholder="Where should we arrive?"
-                                            icon={MapPin}
-                                            value={formData.address}
-                                            onChange={(e) => setFormData({ ...formData, address: e.target.value, pickupLocation: e.target.value })}
-                                            required
-                                        />
+                                        <div className="space-y-3">
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                                                Service Address
+                                            </label>
+
+                                            <div className="space-y-3">
+                                                <div className="relative">
+                                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                                                    <select
+                                                        value={addressMode}
+                                                        onChange={(e) => setAddressMode(e.target.value)}
+                                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white font-bold text-sm appearance-none outline-none focus:ring-2 focus:ring-indigo-500 hover:bg-white dark:hover:bg-slate-800 transition-all cursor-pointer"
+                                                    >
+                                                        {user?.address && (
+                                                            <option value="profile">Profile: {user.address.substring(0, 30)}...</option>
+                                                        )}
+                                                        {addresses && addresses.map(addr => (
+                                                            <option key={addr.id} value={`saved_${addr.id}`}>
+                                                                {addr.label || 'Saved'}: {addr.address ? addr.address.substring(0, 30) : '...'}...
+                                                            </option>
+                                                        ))}
+                                                        <option value="manual">+ Enter New Address</option>
+                                                    </select>
+                                                    {/* Custom Arrow */}
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                        <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                    </div>
+                                                </div>
+
+                                                {/* Manual Address Input */}
+                                                <AnimatePresence>
+                                                    {addressMode === 'manual' && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <textarea
+                                                                placeholder="Enter complete address (House No, Street, City, Pincode)..."
+                                                                value={manualAddress}
+                                                                onChange={(e) => setManualAddress(e.target.value)}
+                                                                className="w-full p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none shadow-sm"
+                                                                rows="3"
+                                                                autoFocus
+                                                            />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+
+                                                {/* Selected Address Preview (Non-Manual) */}
+                                                {addressMode !== 'manual' && (
+                                                    <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800/50">
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                            {addressMode === 'profile' ? user?.address :
+                                                                addressMode.startsWith('saved_') ? addresses.find(a => a.id === parseInt(addressMode.split('_')[1]))?.address : ''}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                     )}
 
                                     {isShiftingOrTransport && (
@@ -220,7 +287,7 @@ const BookingModal = ({ isOpen, onClose, service, onConfirm }) => {
                                                 placeholder="Enter origin address"
                                                 icon={MapPin}
                                                 value={formData.pickupLocation}
-                                                onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value, address: e.target.value })}
+                                                onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
                                                 required
                                             />
                                             <Input

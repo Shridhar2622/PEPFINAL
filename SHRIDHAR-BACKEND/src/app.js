@@ -4,28 +4,51 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
+
+
 const AppError = require('./utils/AppError');
 const routes = require('./routes/v1');
 const errorHandler = require('./middlewares/errorHandler');
 const { globalLimiter } = require('./middlewares/rateLimit');
+const maintenanceMiddleware = require('./middlewares/maintenanceMiddleware');
+
 const passport = require('passport');
 require('./config/passport'); // Passport Config
 
 const app = express();
 
-// Trust Proxy for Render/Heroku (Required for Secure Cookies)
+// Trust Proxy for Render/Heroku (Required for Secure Cookies in Prod)
+
+
 app.enable('trust proxy');
 
 // CORS - Must be first
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
+    : ['https://reservice.in', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
 
 app.use(cors({
     origin: function (origin, callback) {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) === -1) {
+        // In development, allow any localhost/IP origin
+        if (process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+
+        // Allow any local network IP (192.168.x.x, 10.x.x.x, 172.16.x.x) for mobile testing
+        // This is a temporary fix for local testing in "production" mode
+        if (origin.match(/^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/)) {
+            return callback(null, true);
+        }
+
+        // Allow GitHub Codespaces preview domains
+        const isCodespace = origin.endsWith('.app.github.dev');
+        if (allowedOrigins.indexOf(origin) === -1 && !isCodespace) {
+            console.log('BLOCKED CORS ORIGIN:', origin); // Log blocked origin for debugging
+
             return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
         }
         return callback(null, true);
@@ -41,19 +64,39 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// Passport Init
-app.use(passport.initialize());
 
 // Development logging
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
 }
 
-// Limit requests from same API
-app.use('/api', globalLimiter);
+// Body parsers - Must come before Passport and Limiter for accurate data access
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
+
+// Passport Init - Following body/cookie parsing
+app.use(passport.initialize());
+
+// Limit requests from same API
+app.use('/api', globalLimiter);
+
+
+
+
+
+// Data sanitization against NoSQL query injection
+app.use((req, res, next) => {
+    req.body = mongoSanitize.sanitize(req.body);
+    req.params = mongoSanitize.sanitize(req.params);
+
+    if (req.query) {
+        mongoSanitize.sanitize(req.query);
+    }
+
+    next();
+});
 
 
 
@@ -61,7 +104,18 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
+// Health check
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        message: 'Reservice API is running smoothly!',
+        version: '1.0.0'
+    });
+});
+
 // Routes
+app.use(maintenanceMiddleware);
+
 app.use('/api/v1', routes);
 
 // 404 Handler - Catch-all for undefined routes

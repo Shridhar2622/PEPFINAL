@@ -1,6 +1,8 @@
 const TechnicianProfile = require('../models/TechnicianProfile');
 const User = require('../models/User');
 const AppError = require('../utils/AppError');
+const socketService = require('../utils/socket');
+
 
 exports.createProfile = async (req, res, next) => {
     try {
@@ -13,8 +15,12 @@ exports.createProfile = async (req, res, next) => {
         let profileData = {
             bio: req.body.bio,
             skills: req.body.skills,
-            // location: req.body.location // Removed globally per request
         };
+
+        // Explicitly prevent self-assignment of roles during registration
+        delete req.body.categories;
+        delete req.body.services;
+
 
         if (req.file) {
             // Multer Cloudinary storage already uploads the file
@@ -37,6 +43,15 @@ exports.createProfile = async (req, res, next) => {
         if (profileData.profilePhoto) {
             await User.findByIdAndUpdate(req.user.id, { profilePhoto: profileData.profilePhoto });
         }
+
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('technician:created', profile);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(201).json({
             status: 'success',
@@ -63,8 +78,15 @@ exports.updateProfile = async (req, res, next) => {
             }
         }
 
-        // Prevent technicians from editing their own categories
+        // Prevent technicians from editing their own categories/roles or legal agreements
         delete req.body.categories;
+        delete req.body.services;
+        delete req.body.agreement;
+        if (req.body.documents) {
+            delete req.body.documents.agreement;
+            delete req.body.documents.verificationStatus;
+        }
+
 
         const profile = await TechnicianProfile.findOneAndUpdate(
             { user: req.user.id },
@@ -80,6 +102,15 @@ exports.updateProfile = async (req, res, next) => {
         if (req.body.profilePhoto) {
             await User.findByIdAndUpdate(req.user.id, { profilePhoto: req.body.profilePhoto });
         }
+
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('technician:updated', profile);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(200).json({
             status: 'success',
@@ -110,7 +141,7 @@ exports.getAllTechnicians = async (req, res, next) => {
         }
 
         // Always show online first? Or filter by online?
-        // queryObj.isOnline = true; // Optional: only show online technicians?
+
 
         let query = TechnicianProfile.find(queryObj).populate('user', 'name email');
 
@@ -186,6 +217,15 @@ exports.uploadDocuments = async (req, res, next) => {
             role: 'TECHNICIAN'
         });
 
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit('technician:updated', profile);
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
+
         res.status(200).json({
             status: 'success',
             data: { profile }
@@ -224,6 +264,20 @@ exports.updateStatus = async (req, res, next) => {
             return next(new AppError('isOnline must be a boolean', 400));
         }
 
+        // NEW RULE: Block going offline if any job is IN_PROGRESS
+        if (isOnline === false) {
+            const Booking = require('../models/Booking');
+            const activeJobs = await Booking.countDocuments({
+                technician: req.user.id,
+                status: 'IN_PROGRESS'
+            });
+
+            if (activeJobs > 0) {
+                return next(new AppError('Cannot go offline while you have active jobs in progress. Please complete them first.', 400));
+            }
+        }
+
+
         const profile = await TechnicianProfile.findOneAndUpdate(
             { user: req.user.id },
             { isOnline },
@@ -231,6 +285,15 @@ exports.updateStatus = async (req, res, next) => {
         );
 
         if (!profile) return next(new AppError('Profile not found', 404));
+
+        // Socket Emission for Admin
+        try {
+
+            socketService.getIo().to('admin-room').emit(profile.isOnline ? 'technician:online' : 'technician:offline', { technicianId: profile._id });
+        } catch (err) {
+            console.error('Socket emission failed:', err.message);
+        }
+
 
         res.status(200).json({
             status: 'success',
@@ -240,3 +303,19 @@ exports.updateStatus = async (req, res, next) => {
         next(err);
     }
 };
+exports.requestPasswordReset = async (req, res, next) => {
+    try {
+        await User.findByIdAndUpdate(req.user.id, {
+            passwordResetRequested: true,
+            passwordResetRequestedAt: Date.now()
+        });
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Password reset request submitted to administrator.'
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Plus, Trash2, Home, Briefcase, MapIcon } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Trash2, Home, Briefcase, MapIcon, Check } from 'lucide-react';
+
 import { useUser } from '../../context/UserContext';
 import MobileBottomNav from '../../components/mobile/MobileBottomNav';
 import Button from '../../components/common/Button';
 
 const AddressesPage = () => {
     const navigate = useNavigate();
-    const { addresses, addAddress, removeAddress } = useUser();
+    const { addresses, addAddress, removeAddress, setAddressAsDefault } = useUser();
+
     const [isAdding, setIsAdding] = useState(false);
     const [newAddr, setNewAddr] = useState({ type: 'Home', address: '' });
 
@@ -28,7 +30,8 @@ const AddressesPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+        <div className="min-h-screen bg-transparent dark:bg-slate-950 pb-20">
+
             {/* Mobile Header */}
             <div className="sticky top-0 z-50 bg-white dark:bg-slate-900 shadow-sm border-b border-gray-100 dark:border-slate-800 md:hidden">
                 <div className="flex items-center gap-4 px-4 py-4">
@@ -124,12 +127,25 @@ const AddressesPage = () => {
                                             {addr.address}
                                         </p>
                                     </div>
-                                    <button
-                                        onClick={() => removeAddress(addr.id)}
-                                        className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
+                                    <div className="flex flex-col gap-2">
+                                        <button
+                                            onClick={() => removeAddress(addr.id)}
+                                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                                            title="Delete Address"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                        {!addr.isDefault && (
+                                            <button
+                                                onClick={() => setAddressAsDefault(addr.id)}
+                                                className="p-2 text-slate-300 hover:text-indigo-500 transition-colors"
+                                                title="Make Default"
+                                            >
+                                                <Check className="w-5 h-5" />
+                                            </button>
+                                        )}
+                                    </div>
+
                                 </div>
                             );
                         })

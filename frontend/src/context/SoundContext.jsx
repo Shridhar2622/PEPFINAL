@@ -1,12 +1,25 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useUser } from './UserContext';
+
 
 const SoundContext = createContext();
 
 export const SoundProvider = ({ children }) => {
+    const { isAuthenticated } = useUser();
     const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
         const saved = localStorage.getItem('sound_enabled');
-        return saved !== null ? JSON.parse(saved) : true;
+        return saved !== null ? JSON.parse(saved) : true; // Default to true for everyone
     });
+
+    // Reset sound on logout
+    useEffect(() => {
+        if (!isAuthenticated) {
+            // We keep it enabled even if logged out, or follow policy. 
+            // User likely wants sound on next login too. 
+            // setIsSoundEnabled(false); // Removed to keep user preference
+        }
+    }, [isAuthenticated]);
+
 
     const [audioCtx, setAudioCtx] = useState(null);
 
@@ -41,36 +54,59 @@ export const SoundProvider = ({ children }) => {
         oscillator.stop(audioCtx.currentTime + 0.1);
     }, [isSoundEnabled, audioCtx]);
 
+    const playNotificationSound = useCallback(() => {
+        if (!isSoundEnabled) return;
+
+        try {
+            const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+            audio.play().catch(e => console.log("Audio play failed (user interaction needed first):", e));
+        } catch (err) {
+            console.error("Error playing notification sound:", err);
+        }
+    }, [isSoundEnabled]);
+
+
     useEffect(() => {
         localStorage.setItem('sound_enabled', JSON.stringify(isSoundEnabled));
     }, [isSoundEnabled]);
 
-    // Global click listener - Only for mobile
+    // Global click/touch listener to initialize audio context
     useEffect(() => {
-        const handleGlobalClick = (e) => {
-            // Check if on mobile and sound is enabled
+        const handleInteraction = () => {
+            initAudio();
+            // Remove listeners once audio is initialized
+            window.removeEventListener('click', handleInteraction);
+            window.removeEventListener('touchstart', handleInteraction);
+        };
+
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
+
+        // Mobile specific feedback
+        const handleMobileClick = (e) => {
             const isMobile = window.innerWidth < 768;
-            if (!isMobile) return;
+            // Only play sound if mobile, enabled, AND user is authenticated
+            if (!isMobile || !isSoundEnabled || !isAuthenticated) return;
 
-            // Check if user clicked a button, link, or something interactive
             const target = e.target.closest('button, a, [role="button"]');
-
             if (target) {
-                initAudio();
+
                 playGlassSound();
             }
         };
 
-        window.addEventListener('click', handleGlobalClick);
-        window.addEventListener('touchstart', initAudio, { once: true });
+        window.addEventListener('click', handleMobileClick);
 
         return () => {
-            window.removeEventListener('click', handleGlobalClick);
+            window.removeEventListener('click', handleInteraction);
+            window.removeEventListener('touchstart', handleInteraction);
+            window.removeEventListener('click', handleMobileClick);
         };
-    }, [initAudio, playGlassSound]);
+    }, [initAudio, playGlassSound, isSoundEnabled, isAuthenticated]);
 
     return (
-        <SoundContext.Provider value={{ isSoundEnabled, setIsSoundEnabled, playGlassSound }}>
+        <SoundContext.Provider value={{ isSoundEnabled, setIsSoundEnabled, playGlassSound, playNotificationSound, initAudio }}>
+
             {children}
         </SoundContext.Provider>
     );

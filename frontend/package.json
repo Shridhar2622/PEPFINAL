@@ -5,7 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:user": "cross-env VITE_APP_TYPE=USER vite",
+    "dev:tech": "cross-env VITE_APP_TYPE=TECH vite",
     "build": "vite build",
+    "build:user": "cross-env VITE_APP_TYPE=USER vite build --outDir dist-user",
+    "build:tech": "cross-env VITE_APP_TYPE=TECH vite build --outDir dist-tech",
+
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -13,7 +18,10 @@
     "@gsap/react": "^2.1.2",
     "@headlessui/react": "^2.2.9",
     "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/query-sync-storage-persister": "^5.90.22",
     "@tanstack/react-query": "^5.90.20",
+    "@tanstack/react-query-persist-client": "^5.90.22",
+
     "axios": "^1.13.4",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -36,6 +44,8 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^10.1.0",
+
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -43,3 +53,4 @@
     "vite": "^7.2.4"
   }
 }
+

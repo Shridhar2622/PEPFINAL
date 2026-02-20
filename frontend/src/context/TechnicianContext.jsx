@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import client from '../api/client';
 import { useUser } from './UserContext';
+import { useSocket } from './SocketContext';
+import { useSound } from './SoundContext';
+
 import { toast } from 'react-hot-toast';
 
 const TechnicianContext = createContext();
@@ -8,7 +11,10 @@ const TechnicianContext = createContext();
 export const useTechnician = () => useContext(TechnicianContext);
 
 export const TechnicianProvider = ({ children }) => {
-    const { user, isAuthenticated } = useUser();
+    const { user, isAuthenticated, isLoading: userLoading } = useUser();
+    const { socket } = useSocket();
+    const { playNotificationSound } = useSound();
+
     const [technicianProfile, setTechnicianProfile] = useState(null);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -19,30 +25,39 @@ export const TechnicianProvider = ({ children }) => {
     // Fetch Technician Profile if user is a TECHNICIAN
     useEffect(() => {
         const fetchTechnicianData = async () => {
+            // Wait for user auth to settle
+            if (userLoading) return;
+
             if (isAuthenticated && user?.role === 'TECHNICIAN') {
                 try {
                     setLoading(true);
-                    // Fetch technician profile by User ID
-                    const res = await client.get(`/technicians?user=${user._id}`);
 
-                    if (res.data.status === 'success' && res.data.data.technicians.length > 0) {
-                        setTechnicianProfile(res.data.data.technicians[0]);
+                    // Use robust 'me' endpoint
+                    const res = await client.get('/technicians/me');
+
+                    if (res.data.status === 'success') {
+
+                        setTechnicianProfile(res.data.data.profile);
                     } else {
-                        // Profile doesn't exist yet (New registered technician)
                         setTechnicianProfile(null);
                     }
                 } catch (error) {
-                    console.error("Error fetching technician data", error);
+                    console.error("Context - Error fetching technician data", error);
+                    // If 404 or other error, assume no profile or handle gracefully
+                    setTechnicianProfile(null);
+
                 } finally {
                     setLoading(false);
                 }
             } else {
+
                 setLoading(false);
             }
         };
 
         fetchTechnicianData();
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, userLoading]);
+
 
     const uploadDocuments = async (docs) => {
         try {
@@ -156,54 +171,140 @@ export const TechnicianProvider = ({ children }) => {
         }
     };
 
-    const fetchTechnicianStats = async () => {
+    const fetchTechnicianStats = React.useCallback(async () => {
+
         try {
             const res = await client.get('/bookings/stats');
             setStats(res.data.data.stats);
         } catch (error) {
             console.error("Error fetching stats", error);
         }
-    };
+    }, []);
 
-    const fetchTechnicianBookings = async () => {
+    const fetchTechnicianBookings = React.useCallback(async () => {
         try {
             const res = await client.get('/bookings');
-            setJobs(res.data.data.bookings);
+            if (res.data.status === 'success') {
+                setJobs(res.data.data.bookings);
+            }
         } catch (error) {
             console.error("Error fetching bookings", error);
+            toast.error("Failed to sync bookings");
         }
-    };
+    }, []);
 
-    const fetchTechnicianReviews = async () => {
+    const fetchTechnicianReviews = React.useCallback(async () => {
         try {
-            if (!technicianProfile?._id) return;
-            const res = await client.get(`/technicians/${technicianProfile._id}/reviews`);
+            if (!user?._id) return;
+            const res = await client.get(`/reviews/technician/${user._id}`);
+
             setReviews(res.data.data.reviews);
         } catch (error) {
             console.error("Error fetching reviews", error);
         }
-    };
+    }, [user?._id]);
 
-    const fetchReasons = async () => {
+    const fetchReasons = React.useCallback(async () => {
+
         try {
             const res = await client.get('/reasons');
             setReasons(res.data.data.reasons);
         } catch (error) {
             console.error("Error fetching reasons", error);
         }
-    };
+    }, []);
 
-    // Initial Data Load
     useEffect(() => {
-        if (isAuthenticated && user?.role === 'TECHNICIAN') {
+        if (isAuthenticated && user?.role === 'TECHNICIAN' && user?._id) {
+
             fetchTechnicianStats();
             fetchTechnicianBookings();
             fetchTechnicianReviews();
             fetchReasons();
         }
-    }, [isAuthenticated, user, technicianProfile?._id]);
+    }, [isAuthenticated, user?._id, user?.role, fetchTechnicianStats, fetchTechnicianBookings, fetchTechnicianReviews, fetchReasons]);
 
-    // Auto-refresh for new jobs (Polling as fallback for sockets)
+    // Real-time Updates via Socket.IO
+    useEffect(() => {
+        if (isAuthenticated && user?.role === 'TECHNICIAN' && socket) {
+            const handleNotification = (data) => {
+                // Play sound
+                playNotificationSound();
+
+                // Show notification toast
+                toast(t => (
+                    <div onClick={() => toast.dismiss(t.id)} className="cursor-pointer">
+                        <p className="font-bold text-sm">{data.title}</p>
+                        <p className="text-xs">{data.message}</p>
+                    </div>
+                ), { position: 'top-right', duration: 5000, icon: '🔔' });
+
+                // Refresh data
+                fetchTechnicianBookings();
+                fetchTechnicianStats();
+                fetchTechnicianReviews();
+            };
+
+            const handleBookingUpdated = (updatedBooking) => {
+                // Play sound for job updates too if relevant
+                if (updatedBooking.status === 'ASSIGNED') {
+                    // Check if it's assigned to THIS technician (optimization: backend should only send if relevant, but frontend check is safe)
+                    // If the socket event is broadcasted to room 'technician:ID', we are good. 
+                    // Assuming global broadcast for now, let's just notify if it looks like a new assignment.
+                    const isAssignedToMe = updatedBooking.technician === user._id || updatedBooking.technician?._id === user._id;
+                    if (isAssignedToMe) {
+                        playNotificationSound();
+                        toast.success("New Job Assigned to You!", { icon: '🎯' });
+                    }
+                }
+
+                // Also play for other statuses if needed, or rely on the general "update"
+                // But specifically for assignment as requested:
+
+                setJobs(prev => prev.map(j => j._id === updatedBooking._id ? updatedBooking : j));
+                fetchTechnicianStats();
+            };
+
+            const handleBookingCreated = (newBooking) => {
+
+                playNotificationSound();
+
+                // Add to jobs list if it matches criteria (usually all for open pool, or if assigned)
+                setJobs(prev => [newBooking, ...prev]);
+                fetchTechnicianStats();
+
+                toast.success("New Job Arrival! check the dashboard.", {
+                    icon: '🚀',
+                    duration: 5000
+                });
+            };
+
+            const handleReviewCreated = (newReview) => {
+                // Verify if review is for this technician (if backend broadcasts all)
+                // Assuming backend broadcasts to room or we check ID
+                // If newReview.technician === user._id
+                if (newReview.technician === user._id || newReview.technician?._id === user._id) {
+                    playNotificationSound();
+                    setReviews(prev => [newReview, ...prev]);
+                    fetchTechnicianStats(); // Rating changes
+                    toast.success("You received a new 5-star review!", { icon: '⭐' });
+                }
+            };
+
+            socket.on('booking:updated', handleBookingUpdated);
+            socket.on('booking:created', handleBookingCreated);
+            socket.on('review:created', handleReviewCreated);
+
+            return () => {
+                socket.off('booking:updated', handleBookingUpdated);
+                socket.off('booking:created', handleBookingCreated);
+                socket.off('review:created', handleReviewCreated);
+            };
+        }
+    }, [isAuthenticated, user, socket, playNotificationSound]);
+
+    // Polling as fallback (keep existing but reduced frequency if socket is active? No, keep as backup)
+
     useEffect(() => {
         let interval;
         if (isAuthenticated && user?.role === 'TECHNICIAN') {
@@ -213,7 +314,8 @@ export const TechnicianProvider = ({ children }) => {
             }, 30000); // Check every 30 seconds
         }
         return () => clearInterval(interval);
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user?.role, fetchTechnicianBookings, fetchTechnicianStats]);
+
 
     const updateBookingStatus = async (bookingId, status, completionData = null) => {
         try {
@@ -298,7 +400,21 @@ export const TechnicianProvider = ({ children }) => {
         fetchTechnicianStats,
         fetchTechnicianReviews,
         fetchReasons,
-        updateBookingStatus
+        updateBookingStatus,
+        requestPasswordReset: async () => {
+            try {
+                const res = await client.patch('/technicians/request-reset');
+                if (res.data.status === 'success') {
+                    toast.success("Reset request submitted to admin");
+                    return { success: true };
+                }
+            } catch (error) {
+                console.error("Request reset failed", error);
+                toast.error(error.response?.data?.message || "Request failed");
+                return { success: false };
+            }
+        }
+
     };
 
     return <TechnicianContext.Provider value={value}>{children}</TechnicianContext.Provider>;
