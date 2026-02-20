@@ -45,7 +45,7 @@ class PaymentService {
             await transaction.save();
 
             // Update Booking
-            booking.paymentStatus = 'PAID'; // We need to add this field to Booking model if not exists
+            booking.paymentStatus = 'PAID';
             await booking.save({ validateBeforeSave: false }); // Avoid strict validation issues for now
 
             // Send Notifications

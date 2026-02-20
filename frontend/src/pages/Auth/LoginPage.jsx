@@ -42,37 +42,11 @@ const LoginPage = () => {
     const { login, register } = useUser();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [isExistingCustomer, setIsExistingCustomer] = useState(() => {
-        return location.state?.isSignUp ? false : true;
-    });
 
-    // Form fields
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [pincode, setPincode] = useState('');
-    const [role, setRole] = useState('USER');
     const [rememberMe, setRememberMe] = useState(true);
-    // Default fallback to ensure user is not blocked if API fails or delays
-    const [allowedPincodes, setAllowedPincodes] = useState(['845438']);
-
-    // Fetch allowed pincodes
-    React.useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.reservice.in/api/v1'}/settings/public`);
-                const data = await response.json();
-                if (data.status === 'success' && data.data.serviceablePincodes && data.data.serviceablePincodes.length > 0) {
-                    setAllowedPincodes(data.data.serviceablePincodes);
-                }
-            } catch (error) {
-                console.error('Failed to fetch settings:', error);
-                // Keep default if fail
-            }
-        };
-        fetchSettings();
-    }, []);
 
     useGSAP(() => {
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
@@ -156,66 +130,33 @@ const LoginPage = () => {
 
         const tokenToSend = isCaptchaEnabled ? recaptchaToken : 'bypass-token';
 
-        if (isExistingCustomer) {
-            // LOGIN FLOW
-            // Enforce 'USER' role for main portal login
-            const result = await login(email, password, tokenToSend, 'USER', rememberMe);
-            if (result.success) {
-                toast.success('Welcome back!');
+        // LOGIN FLOW
+        // No role enforced - Universal Login
+        const result = await login(email, password, tokenToSend, null, rememberMe);
 
-                // Redirect to original location if available, otherwise switch based on role
+        if (result.success) {
+            toast.success('You are logged in');
+
+            // Redirect based on ROLE
+            const role = result.user?.role;
+
+            if (role === 'TECHNICIAN') {
+                navigate('/technician/dashboard');
+            } else if (role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else {
+                // Default User/Customer
                 const from = location.state?.from?.pathname;
-                if (from) {
+                if (from && !from.startsWith('/technician') && !from.startsWith('/admin')) {
                     navigate(from, { replace: true });
                 } else {
-                    if (result.user?.role === 'TECHNICIAN') {
-                        navigate('/technician/dashboard');
-                    } else if (result.user?.role === 'ADMIN') {
-                        navigate('/admin/dashboard');
-                    } else {
-                        navigate('/bookings');
-                    }
+                    navigate('/bookings');
                 }
-            } else {
-                toast.error(result.message || 'Login failed');
-                if (recaptchaRef.current) recaptchaRef.current.reset();
-                setRecaptchaToken(null);
             }
         } else {
-            // Pincode Validation - Robus check
-            const cleanPincode = pincode.trim();
-            // Ensure we compare strings to strings
-
-            const isAllowed = allowedPincodes.some(p => p.toString() === cleanPincode);
-
-            if (!isAllowed) {
-                toast.error(`We do not service your location (${cleanPincode}) currently.`);
-                setIsLoading(false);
-                if (recaptchaRef.current) recaptchaRef.current.reset();
-                return; // HALT REGISTRATION
-            }
-
-            const result = await register(name, email, password, password, phone, 'USER', tokenToSend, pincode, '');
-
-            if (result.success) {
-                toast.success('Registration successful!');
-
-                const from = location.state?.from?.pathname;
-                if (from) {
-                    navigate(from, { replace: true });
-                } else {
-                    // Small notice for address
-                    toast('Please add your address in profile to book a service!', {
-                        icon: '🏠',
-                        duration: 6000
-                    });
-                    navigate('/'); // Redirect to Main Page
-                }
-            } else {
-                toast.error(result.message || 'Registration failed');
-                if (recaptchaRef.current) recaptchaRef.current.reset();
-                setRecaptchaToken(null);
-            }
+            toast.error(result.message || 'Login failed');
+            if (recaptchaRef.current) recaptchaRef.current.reset();
+            setRecaptchaToken(null);
         }
         setIsLoading(false);
     };
@@ -249,27 +190,11 @@ const LoginPage = () => {
                             <span className="text-xl font-bold text-rose-600">Reservice</span>
                         </Link>
                         <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1">
-                            {isExistingCustomer ? 'Welcome Back' : 'Create your profile'}
+                            Welcome Back
                         </h1>
                         <p className="text-slate-500 text-sm">
-                            {isExistingCustomer ? 'Login to your verified account.' : 'Join Reservice today for expert home help.'}
+                            Login to your verified account.
                         </p>
-                    </div>
-
-                    {/* Compact Mode Toggle */}
-                    <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-3 stagger-item">
-                        <button
-                            onClick={() => { setIsExistingCustomer(false); setRecaptchaToken(null); if (recaptchaRef.current) recaptchaRef.current.reset(); }}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${!isExistingCustomer ? 'bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            New Profile
-                        </button>
-                        <button
-                            onClick={() => { setIsExistingCustomer(true); setRecaptchaToken(null); if (recaptchaRef.current) recaptchaRef.current.reset(); }}
-                            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${isExistingCustomer ? 'bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
-                        >
-                            Existing Customer
-                        </button>
                     </div>
 
                     <Link to="/" className="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 mb-4 transition-colors">
@@ -278,43 +203,7 @@ const LoginPage = () => {
                     </Link>
 
                     <form onSubmit={handleSubmit} className="space-y-3 stagger-item">
-                        {!isExistingCustomer && (
-                            <div className="space-y-3 mb-3">
-                                <Input
-                                    id="name"
-                                    label="Full Name"
-                                    placeholder="John Doe"
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    required
-                                    className="py-1.5"
-                                />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Input
-                                        id="phone"
-                                        label="Phone"
-                                        placeholder="+91..."
-                                        type="tel"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                        required
-                                        className="py-1.5"
-                                    />
-                                    <Input
-                                        id="pincode"
-                                        label="Pincode"
-                                        placeholder="560001"
-                                        type="text"
-                                        value={pincode}
-                                        onChange={(e) => setPincode(e.target.value)}
-                                        required
-                                        className="py-1.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
-                                        maxLength={6}
-                                    />
-                                </div>
-                            </div>
-                        )}
+
 
                         <Input
                             id="email"
@@ -330,7 +219,7 @@ const LoginPage = () => {
                         <Input
                             id="password"
                             label="Password"
-                            placeholder={isExistingCustomer ? "Password" : "Create Password"}
+                            placeholder="Password"
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -347,20 +236,18 @@ const LoginPage = () => {
                             }
                         />
 
-                        {isExistingCustomer && (
-                            <div className="flex items-center justify-between text-xs">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={rememberMe}
-                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
-                                    />
-                                    <span className="text-slate-600">Remember me</span>
-                                </label>
-                                <a href="#" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">Forgot?</a>
-                            </div>
-                        )}
+                        <div className="flex items-center justify-between text-xs">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                                />
+                                <span className="text-slate-600">Remember me</span>
+                            </label>
+                            <a href="#" className="font-bold text-blue-600 hover:text-blue-500 transition-colors">Forgot?</a>
+                        </div>
 
 
                         {/* Captcha for BOTH Login and Register */}
@@ -380,9 +267,7 @@ const LoginPage = () => {
                             type="submit"
                             disabled={isLoading}
                         >
-                            {isLoading
-                                ? (isExistingCustomer ? 'Signing in...' : 'Creating account...')
-                                : (isExistingCustomer ? 'Sign In' : 'Create Account')}
+                            {isLoading ? 'Signing in...' : 'Sign In'}
                         </Button>
 
 
@@ -410,6 +295,13 @@ const LoginPage = () => {
                                 </div>
                             </>
                         )}
+
+                        <p className="mt-6 text-center text-sm text-slate-500 stagger-item">
+                            Don't have an account?{' '}
+                            <Link to="/register" className="font-semibold text-rose-600 hover:text-rose-700">
+                                Sign up
+                            </Link>
+                        </p>
 
                     </form>
                 </div>

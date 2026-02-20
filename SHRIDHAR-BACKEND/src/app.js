@@ -5,7 +5,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const mongoSanitize = require('express-mongo-sanitize');
-const xss = require('xss-clean');
+
 const AppError = require('./utils/AppError');
 const routes = require('./routes/v1');
 const errorHandler = require('./middlewares/errorHandler');
@@ -17,7 +17,7 @@ require('./config/passport'); // Passport Config
 const app = express();
 
 // Trust Proxy for Render/Heroku (Required for Secure Cookies in Prod)
-// Trust Proxy for Render/Heroku (Required for Secure Cookies in Prod)
+
 app.enable('trust proxy');
 
 // CORS - Must be first
@@ -76,9 +76,9 @@ app.use(passport.initialize());
 // Limit requests from same API
 app.use('/api', globalLimiter);
 
-// Data sanitization against XSS attacks
-// Data sanitization against XSS attacks
-// app.use(xss());
+
+
+
 
 // Data sanitization against NoSQL query injection
 app.use((req, res, next) => {

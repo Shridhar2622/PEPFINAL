@@ -24,7 +24,7 @@ const Input = forwardRef(({
                     id={id}
                     type={type}
                     className={twMerge(
-                        'w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 transition-all',
+                        'w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-600/20 focus:border-rose-600 transition-all [&::-ms-reveal]:hidden [&::-ms-clear]:hidden',
                         rightElement && 'pr-11',
                         error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
                         className
@@ -32,7 +32,7 @@ const Input = forwardRef(({
                     {...props}
                 />
                 {rightElement && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 group-focus-within/field:text-rose-600 transition-colors">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-slate-400 group-focus-within/field:text-rose-600 transition-colors pointer-events-auto">
                         {rightElement}
                     </div>
                 )}

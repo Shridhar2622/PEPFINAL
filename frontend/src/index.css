@@ -229,3 +229,15 @@ body {
 :is(.dark) body {
   background-color: var(--color-slate-950);
 }
+
+/* Global Input Resets */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

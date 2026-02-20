@@ -7,20 +7,26 @@ import { motion } from 'framer-motion';
 const AdminLoginPage = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const { login } = useAdmin();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        const result = await login(email, password);
-        if (result === true) {
-            const from = location.state?.from?.pathname || '/admin/dashboard';
-            navigate(from, { replace: true });
-        } else {
-            setError(typeof result === 'string' ? result : 'Invalid administrative credentials');
+        setIsLoading(true);
+
+        try {
+            const result = await login(email, password);
+            if (result === true) {
+                const from = location.state?.from?.pathname || '/admin/dashboard';
+                navigate(from, { replace: true });
+            } else {
+                setError(typeof result === 'string' ? result : 'Invalid administrative credentials');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -77,9 +83,14 @@ const AdminLoginPage = () => {
 
                     <button
                         type="submit"
-                        className="w-full py-4 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl font-black shadow-xl shadow-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        disabled={isLoading}
+                        className="w-full py-4 bg-slate-900 dark:bg-rose-600 text-white rounded-2xl font-black shadow-xl shadow-rose-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Sign In <ArrowRight className="w-5 h-5" />
+                        {isLoading ? 'Verifying...' : (
+                            <>
+                                Sign In <ArrowRight className="w-5 h-5" />
+                            </>
+                        )}
                     </button>
 
                     <p className="text-center text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-bold">

@@ -10,8 +10,9 @@ import Button from '../../components/common/Button';
 import Particles from '../../react-bit/Particle';
 import BookingModal from '../../components/bookings/BookingModal';
 import { useBookings } from '../../context/BookingContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useServices, useCategories } from '../../hooks/useServices';
+import { useUser } from '../../context/UserContext';
 
 import promoImg from '../../assets/images/fridge-repair.png';
 import MobileHomePage from './MobileHomePage';
@@ -53,6 +54,7 @@ const HomePage = () => {
   const overlayRef = useRef(null);
   const containerRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { addBooking } = useBookings();
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,7 +62,13 @@ const HomePage = () => {
 
   const [comingSoonTitle, setComingSoonTitle] = useState(null);
 
+  const { user } = useUser(); // Import useUser hook
+
   const handleBookClick = (service) => {
+    if (!user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
     setSelectedService(service);
     setIsModalOpen(true);
   };
@@ -229,6 +237,24 @@ const HomePage = () => {
             </div>
 
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+
+              {/* Welcome Badge for Logged In Users */}
+              {user && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-xs"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    Welcome back, {user.name.split(' ')[0]}
+                  </span>
+                </motion.div>
+              )}
 
               <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter leading-[1.1]">
                 <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent drop-shadow-sm">

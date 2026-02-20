@@ -63,6 +63,8 @@ const Navbar = () => {
             { name: 'Bookings', path: '/bookings' },
         ];
 
+    if (location.pathname === '/bookings') return null;
+
     return (
         <nav className={navClasses}>
             <div className="max-w-[95%] mx-auto px-4 sm:px-6 lg:px-8">

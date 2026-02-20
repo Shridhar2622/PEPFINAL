@@ -1,6 +1,7 @@
 const TechnicianProfile = require('../models/TechnicianProfile');
 const User = require('../models/User');
 const AppError = require('../utils/AppError');
+const socketService = require('../utils/socket');
 
 exports.createProfile = async (req, res, next) => {
     try {
@@ -43,7 +44,7 @@ exports.createProfile = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:created', profile);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -100,7 +101,7 @@ exports.updateProfile = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:updated', profile);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -135,7 +136,7 @@ exports.getAllTechnicians = async (req, res, next) => {
         }
 
         // Always show online first? Or filter by online?
-        // queryObj.isOnline = true; // Optional: only show online technicians?
+
 
         let query = TechnicianProfile.find(queryObj).populate('user', 'name email');
 
@@ -213,7 +214,7 @@ exports.uploadDocuments = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:updated', profile);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -280,7 +281,7 @@ exports.updateStatus = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit(profile.isOnline ? 'technician:online' : 'technician:offline', { technicianId: profile._id });
         } catch (err) {
             console.error('Socket emission failed:', err.message);

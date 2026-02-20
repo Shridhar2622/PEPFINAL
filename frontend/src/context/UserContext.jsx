@@ -84,7 +84,7 @@ export const UserProvider = ({ children }) => {
                     localStorage.setItem('token', data.token);
                 }
                 setUser(data.data.user);
-                toast.success('Login successful!');
+                // toast.success('Login successful!'); // Removed to avoid double toast
                 return { success: true, user: data.data.user };
             } else {
                 throw new Error(data.message || 'Login failed');
@@ -92,7 +92,7 @@ export const UserProvider = ({ children }) => {
         } catch (err) {
             const msg = err.response?.data?.message || err.message || 'Login failed';
             setError(msg);
-            toast.error(msg);
+            // toast.error(msg); // Removed to avoid double toast, UI should handle if needed or rely on this return
             return { success: false, message: msg };
         } finally {
             setIsLoading(false);

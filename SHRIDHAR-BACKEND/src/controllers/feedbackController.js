@@ -1,5 +1,6 @@
 const Feedback = require('../models/Feedback');
 const AppError = require('../utils/AppError');
+const socketService = require('../utils/socket');
 
 exports.createFeedback = async (req, res, next) => {
     try {
@@ -17,7 +18,7 @@ exports.createFeedback = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('feedback:created', newFeedback);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -70,7 +71,7 @@ exports.updateFeedbackStatus = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('feedback:updated', feedback);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -97,7 +98,7 @@ exports.deleteFeedback = async (req, res, next) => {
 
         // Socket Emission for Admin
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('feedback:deleted', { id: req.params.id });
         } catch (err) {
             console.error('Socket emission failed:', err.message);

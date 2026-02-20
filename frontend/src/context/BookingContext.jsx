@@ -116,7 +116,14 @@ export const BookingProvider = ({ children }) => {
         };
     };
 
-    const fetchBookings = async () => {
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+        totalResults: 0
+    });
+
+    const fetchBookings = async (params = {}) => {
         if (!isAuthenticated) {
             setBookings([]);
             return;
@@ -124,14 +131,34 @@ export const BookingProvider = ({ children }) => {
 
         setIsLoading(true);
         try {
-            const res = await client.get('/bookings');
+            const res = await client.get('/bookings', { params });
             let rawBookings = [];
+
+            // Handle different response structures
             if (res.data.data && Array.isArray(res.data.data)) {
                 rawBookings = res.data.data;
             } else if (res.data.data && res.data.data.bookings) {
                 rawBookings = res.data.data.bookings;
+                // Capture pagination data if available
+                if (res.data.data.totalPages !== undefined) {
+                    setPagination({
+                        page: res.data.data.page || params.page || 1,
+                        limit: res.data.data.limit || params.limit || 10,
+                        totalPages: res.data.data.totalPages || 1,
+                        totalResults: res.data.data.totalResults || res.data.data.results || rawBookings.length
+                    });
+                }
             } else if (res.data.data && res.data.data.docs) {
                 rawBookings = res.data.data.docs;
+                // Capture pagination data from classic Mongoose paginate response
+                if (res.data.data.totalPages !== undefined) {
+                    setPagination({
+                        page: res.data.data.page || params.page || 1,
+                        limit: res.data.data.limit || params.limit || 10,
+                        totalPages: res.data.data.totalPages || 1,
+                        totalResults: res.data.data.totalDocs || 0
+                    });
+                }
             }
 
             setBookings(rawBookings.map(transformBooking));
@@ -282,7 +309,7 @@ export const BookingProvider = ({ children }) => {
     };
 
     return (
-        <BookingContext.Provider value={{ bookings, isLoading, error, fetchBookings, addBooking, cancelBooking, updateBookingStatus, processPayment, pendingReviews, submitReview }}>
+        <BookingContext.Provider value={{ bookings, isLoading, error, fetchBookings, addBooking, cancelBooking, updateBookingStatus, processPayment, pendingReviews, submitReview, pagination }}>
             {children}
         </BookingContext.Provider>
     );

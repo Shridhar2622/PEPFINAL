@@ -19,7 +19,7 @@ const login = {
         email: Joi.string().required(),
         password: Joi.string().required(),
         recaptchaToken: Joi.string(),
-        role: Joi.string().valid('USER', 'TECHNICIAN', 'ADMIN'),
+        role: Joi.string().valid('USER', 'TECHNICIAN', 'ADMIN').allow(null, ''),
         rememberMe: Joi.boolean()
     }),
 };

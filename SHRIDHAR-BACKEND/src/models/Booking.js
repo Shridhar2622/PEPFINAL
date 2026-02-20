@@ -116,9 +116,9 @@ bookingSchema.virtual('review', {
     justOne: true
 });
 
-// bookingSchema.index({ customer: 1, status: 1 });
-// bookingSchema.index({ technician: 1, status: 1 });
-// bookingSchema.index({ scheduledAt: 1 });
+bookingSchema.index({ customer: 1, status: 1 });
+bookingSchema.index({ technician: 1, status: 1 });
+bookingSchema.index({ scheduledAt: 1 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
 

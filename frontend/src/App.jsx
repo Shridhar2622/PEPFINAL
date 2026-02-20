@@ -163,7 +163,7 @@ function AnimatedRoutes() {
               {/* Technician Routes */}
               <Route path="/partner" element={<PartnerLandingPage />} />
               <Route path="/partner/register" element={<TechnicianRegisterPage />} />
-              <Route path="/technician/login" element={<TechnicianLoginPage />} />
+              <Route path="/technician/login" element={<LoginPage />} />
               <Route path="/technician/onboarding" element={
                 <ProtectedRoute allowedRoles={['TECHNICIAN']}>
                   <TechnicianOnboardingPage />

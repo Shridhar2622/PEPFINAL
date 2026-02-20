@@ -86,7 +86,7 @@ exports.login = async (req, res, next) => {
         }
 
         // 4) Role Isolation Check
-
+        // Only if a specific role is REQUESTED (e.g. from /admin login page)
         if (req.body.role && req.body.role.toUpperCase() !== user.role.toUpperCase()) {
             console.warn('[WARN] Login: Role mismatch for:', email);
             return next(new AppError('Incorrect email or password', 401));

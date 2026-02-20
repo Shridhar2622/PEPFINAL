@@ -45,7 +45,7 @@ exports.createTechnician = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:created', technicianProfile);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -189,7 +189,7 @@ exports.approveTechnician = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:updated', technician);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -220,7 +220,7 @@ exports.rejectTechnician = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:updated', technician);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -266,7 +266,7 @@ exports.deleteTechnician = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:deleted', { id: req.params.id });
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -326,7 +326,7 @@ exports.updateTechnicianProfile = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('technician:updated', technician);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -407,7 +407,7 @@ exports.toggleUserStatus = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('user:updated', user);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -619,7 +619,7 @@ exports.updateSettings = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('settings:updated', settings);
         } catch (err) {
             console.error('Socket emission failed:', err.message);
@@ -656,7 +656,7 @@ exports.deleteReview = async (req, res, next) => {
 
         // Socket Emission for Real-time Update
         try {
-            const socketService = require('../utils/socket');
+
             socketService.getIo().to('admin-room').emit('review:deleted', { id: req.params.id });
         } catch (err) {
             console.error('Socket emission failed:', err.message);

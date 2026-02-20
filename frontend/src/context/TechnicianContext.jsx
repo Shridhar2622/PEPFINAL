@@ -29,12 +29,12 @@ export const TechnicianProvider = ({ children }) => {
             if (isAuthenticated && user?.role === 'TECHNICIAN') {
                 try {
                     setLoading(true);
-                    console.log("Context - Fetching profile for:", user?._id);
+
                     // Use robust 'me' endpoint
                     const res = await client.get('/technicians/me');
 
                     if (res.data.status === 'success') {
-                        console.log("Context - Profile found:", !!res.data.data.profile);
+
                         setTechnicianProfile(res.data.data.profile);
                     } else {
                         setTechnicianProfile(null);
@@ -47,7 +47,7 @@ export const TechnicianProvider = ({ children }) => {
                     setLoading(false);
                 }
             } else {
-                console.log("Context - Not tech or not auth - Auth:", isAuthenticated, "Role:", user?.role);
+
                 setLoading(false);
             }
         };

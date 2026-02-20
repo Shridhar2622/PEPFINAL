@@ -29,12 +29,16 @@ export const SocketProvider = ({ children }) => {
                 socketUrl = window.location.origin;
             }
 
+            const token = localStorage.getItem('token');
             const newSocket = io(socketUrl, {
                 withCredentials: true,
                 autoConnect: true,
                 reconnection: true,
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,
+                auth: {
+                    token: token
+                }
             });
 
             setSocket(newSocket);

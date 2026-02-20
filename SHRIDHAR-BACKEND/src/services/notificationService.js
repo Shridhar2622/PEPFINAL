@@ -28,8 +28,7 @@ class NotificationService {
             // 3. Push Notification / Email - Placeholder
 
 
-            // 3. Push Notification / Email - Placeholder
-            // TODO: Call email service if needed
+
 
             return notification;
         } catch (error) {
