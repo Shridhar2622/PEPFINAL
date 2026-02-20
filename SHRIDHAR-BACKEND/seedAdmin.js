@@ -17,13 +17,17 @@ const seedAdmin = async () => {
         const adminExists = await User.findOne({ role: 'ADMIN' });
         if (adminExists) {
             console.log('Admin already exists:', adminExists.email);
+            // Reset password ensuring it's hashed
+            adminExists.password = 'adminpassword123';
+            await adminExists.save();
+            console.log('Admin Password Reset to: adminpassword123');
             process.exit(0);
         }
 
         const admin = await User.create({
             name: 'Super Admin',
-                email: 'admin@shridhar.com',
-                password: 'adminpassword123',
+            email: 'admin@shridhar.com',
+            password: 'adminpassword123',
             role: 'ADMIN',
             phone: '0000000000',
             isTechnicianOnboarded: true

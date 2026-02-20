@@ -6,7 +6,6 @@ exports.getAllCategories = async (req, res, next) => {
     try {
         const categories = await Category.find({}).sort('order');
 
-
         // Find corresponding services for each category
         const categoryIds = categories.map(cat => cat._id);
         const services = await Service.find({
@@ -38,20 +37,7 @@ exports.getAllCategories = async (req, res, next) => {
 
 exports.createCategory = async (req, res, next) => {
     try {
-
-
-        let image = 'https://images.unsplash.com/photo-1581578731548-c64695cc6958'; // Default
-
-        if (req.file) {
-            image = req.file.path;
-        } else if (req.body.image) {
-            image = req.body.image;
-        }
-
-        const newCategory = await Category.create({
-            ...req.body,
-            image
-        });
+        const newCategory = await Category.create(req.body);
 
         // Socket Emission for Admin
         try {
@@ -60,7 +46,6 @@ exports.createCategory = async (req, res, next) => {
         } catch (err) {
             console.error('Socket emission failed:', err.message);
         }
-
 
         res.status(201).json({
             status: 'success',
@@ -95,10 +80,6 @@ exports.getCategory = async (req, res, next) => {
 
 exports.updateCategory = async (req, res, next) => {
     try {
-        if (req.file) {
-            req.body.image = req.file.path;
-        }
-
         const category = await Category.findByIdAndUpdate(req.params.id, req.body, {
             new: true,
             runValidators: true
@@ -115,7 +96,6 @@ exports.updateCategory = async (req, res, next) => {
         } catch (err) {
             console.error('Socket emission failed:', err.message);
         }
-
 
         res.status(200).json({
             status: 'success',
@@ -143,7 +123,6 @@ exports.deleteCategory = async (req, res, next) => {
         } catch (err) {
             console.error('Socket emission failed:', err.message);
         }
-
 
         res.status(204).json({
             status: 'success',

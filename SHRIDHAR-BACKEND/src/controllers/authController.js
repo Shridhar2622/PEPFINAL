@@ -72,27 +72,25 @@ exports.login = async (req, res, next) => {
 
         if (!user) {
             console.warn('[WARN] Login: User not found:', email);
-            return next(new AppError('Incorrect email or password', 401));
+            return next(new AppError(`User not found: ${email}`, 401));
         }
 
         const isPasswordCorrect = await user.correctPassword(password, user.password);
         if (!isPasswordCorrect) {
             console.warn('[WARN] Login: Incorrect password for:', email);
-
-            return next(new AppError('Incorrect email or password', 401));
+            return next(new AppError('Incorrect password', 401));
         }
 
         // 3) Check if user is active
         if (user.isActive === false) {
             console.warn('[WARN] Login: Account inactive:', email);
-            return next(new AppError('Your account has been deactivated. Please contact support.', 403));
+            return next(new AppError('Account inactive', 403));
         }
 
         // 4) Role Isolation Check
-        // Only if a specific role is REQUESTED (e.g. from /admin login page)
         if (req.body.role && req.body.role.toUpperCase() !== user.role.toUpperCase()) {
             console.warn('[WARN] Login: Role mismatch for:', email);
-            return next(new AppError('Incorrect email or password', 401));
+            return next(new AppError(`Role mismatch: Expected ${req.body.role}, found ${user.role}`, 401));
         }
 
         // 5) If everything ok, send token to client
